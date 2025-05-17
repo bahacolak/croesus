@@ -11,7 +11,7 @@
     <groupId>com.bahadircolak</groupId>
     <artifactId>croesus</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <n>croesus</n>
+    <name>croesus</name>
     <description>Dijital Varlık Hesabı ve Yatırım Platformu</description>
     <url/>
     <licenses>
