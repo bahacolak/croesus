@@ -6,6 +6,7 @@ import com.bahadircolak.croesus.security.service.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -48,6 +49,25 @@ public class WebSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // SECURITY CONFIGURATION FOR DEVELOPMENT
+    @Bean 
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // TEMPORARY: We are allowing all requests in the development phase
+                        .anyRequest().permitAll()
+                );
+
+        http.authenticationProvider(authenticationProvider());
+        http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    /* SECURITY CONFIGURATION FOR PRODUCTION
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -65,4 +85,5 @@ public class WebSecurityConfig {
 
         return http.build();
     }
+    */
 } 
