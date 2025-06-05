@@ -1,0 +1,53 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: croesus-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-croesus}
+      POSTGRES_USER: ${POSTGRES_USER:-croesus_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-croesus_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - croesus-network
+
+  # Spring Boot Backend
+  backend:
+    build: .
+    container_name: croesus-backend
+    depends_on:
+      - postgres
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-croesus}
+      DATABASE_USERNAME: ${POSTGRES_USER:-croesus_user}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-croesus_pass}
+      JWT_SECRET: ${JWT_SECRET:-defaultSecretKey}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8080:8080"
+    networks:
+      - croesus-network
+
+  # React Frontend - Will be run on host
+  # frontend:
+  #   build: ./frontend
+  #   container_name: croesus-frontend
+  #   depends_on:
+  #     - backend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     REACT_APP_API_URL: http://localhost:8080
+  #   networks:
+  #     - croesus-network
+
+volumes:
+  postgres_data:
+
+networks:
+  croesus-network:
+    driver: bridge 
