@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Standardized API Response
- * Tüm servislerde aynı response formatını kullanmak için
+ * Used for consistent response format across services
  */
 @Data
 @NoArgsConstructor
@@ -18,7 +18,7 @@ public class ApiResponse<T> {
     private String error;
 
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, "İşlem başarılı", data, null);
+        return new ApiResponse<>(true, "Operation successful", data, null);
     }
 
     public static <T> ApiResponse<T> success(String message, T data) {

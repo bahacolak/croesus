@@ -26,15 +26,15 @@ public class SecurityConfig {
         http.cors().and().csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
                 .authorizeHttpRequests(authz -> authz
-                        // Public health ve actuator endpoints
+                        // Public health and actuator endpoints
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/health").permitAll()
                         .requestMatchers("/eureka/**").permitAll()
-                        // Market data endpoints - GET metodları herkese açık
+                        // Market data endpoints - GET methods are public
                         .requestMatchers(HttpMethod.GET, "/api/market/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/assets/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/crypto/**").permitAll()
-                        // POST endpoints kimlik doğrulama gerektirir
+                        // POST endpoints require authentication
                         .requestMatchers(HttpMethod.POST, "/api/market/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/crypto/**").authenticated()
                         .anyRequest().authenticated()

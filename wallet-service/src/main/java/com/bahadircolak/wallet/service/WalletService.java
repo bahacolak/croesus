@@ -33,7 +33,7 @@ public class WalletService {
             throw new RuntimeException("Wallet already exists for user: " + userId);
         }
 
-        // User'ın var olduğunu kontrol et
+        // Check if user exists
         if (!userService.userExists(userId)) {
             throw new RuntimeException("User not found: " + userId);
         }
@@ -120,7 +120,7 @@ public class WalletService {
         wallet.setBalance(newBalance);
         walletRepository.save(wallet);
 
-        // Transaction kaydı oluştur
+        // Create transaction record
         WalletTransaction transaction = new WalletTransaction();
         transaction.setUserId(userId);
         transaction.setWalletId(wallet.getId());
@@ -142,44 +142,44 @@ public class WalletService {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Long fromUserId = userService.getUserIdByUsername(userDetails.getUsername());
 
-        // Hedef kullanıcının var olduğunu kontrol et
+        // Check if target user exists
         if (!userService.userExists(request.getTargetUserId())) {
             throw new RuntimeException("Target user not found: " + request.getTargetUserId());
         }
 
-        // Kendi kendine transfer kontrolü
+        // Self-transfer check
         if (fromUserId.equals(request.getTargetUserId())) {
             throw new RuntimeException("Cannot transfer to yourself");
         }
 
-        // Gönderen cüzdan
+        // Sender wallet
         Wallet fromWallet = walletRepository.findByUserIdAndIsActiveTrue(fromUserId)
                 .orElseThrow(() -> new RuntimeException("Source wallet not found"));
 
-        // Alıcı cüzdan (yoksa oluştur)
+        // Receiver wallet (create if not exists)
         Wallet toWallet = walletRepository.findByUserIdAndIsActiveTrue(request.getTargetUserId())
                 .orElseGet(() -> createWalletForUser(request.getTargetUserId()));
 
-        // Bakiye kontrolü
+        // Balance check
         if (fromWallet.getBalance().compareTo(request.getAmount()) < 0) {
             throw new RuntimeException("Insufficient balance. Current balance: " + fromWallet.getBalance());
         }
 
         String referenceId = UUID.randomUUID().toString();
 
-        // Gönderen bakiyesini azalt
+        // Reduce sender balance
         BigDecimal fromOldBalance = fromWallet.getBalance();
         BigDecimal fromNewBalance = fromOldBalance.subtract(request.getAmount());
         fromWallet.setBalance(fromNewBalance);
         walletRepository.save(fromWallet);
 
-        // Alıcı bakiyesini artır
+        // Increase receiver balance
         BigDecimal toOldBalance = toWallet.getBalance();
         BigDecimal toNewBalance = toOldBalance.add(request.getAmount());
         toWallet.setBalance(toNewBalance);
         walletRepository.save(toWallet);
 
-        // Gönderen için transaction
+        // Transaction for sender
         WalletTransaction outTransaction = new WalletTransaction();
         outTransaction.setUserId(fromUserId);
         outTransaction.setWalletId(fromWallet.getId());
@@ -191,7 +191,7 @@ public class WalletService {
                 request.getDescription() : "Transfer to user " + request.getTargetUserId());
         outTransaction.setReferenceId(referenceId);
         
-        // Alıcı için transaction
+        // Transaction for receiver
         WalletTransaction inTransaction = new WalletTransaction();
         inTransaction.setUserId(request.getTargetUserId());
         inTransaction.setWalletId(toWallet.getId());

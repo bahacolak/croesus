@@ -35,27 +35,27 @@ public class TradingService {
             UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             Long userId = userService.getUserIdByUsername(userDetails.getUsername());
 
-            // Market Service'den asset bilgilerini al
+            // Get asset information from Market Service
             Map<String, Object> asset = marketService.getAssetBySymbol(request.getSymbol());
             Long assetId = Long.valueOf(asset.get("id").toString());
             BigDecimal currentPrice = new BigDecimal(asset.get("currentPrice").toString());
 
             BigDecimal totalCost = currentPrice.multiply(request.getQuantity());
 
-            // User Service'den wallet bakiyesini kontrol et
+            // Check wallet balance from User Service
             BigDecimal walletBalance = userService.getUserWalletBalance(userId);
             if (walletBalance.compareTo(totalCost) < 0) {
                 return ResponseEntity.badRequest()
                         .body(new MessageResponse("Insufficient balance. Required: " + totalCost + ", Current: " + walletBalance));
             }
 
-            // Wallet bakiyesini güncelle (negatif amount ile)
+            // Update wallet balance (negative amount)
             userService.updateUserWalletBalance(userId, totalCost.negate());
 
-            // Portfolio Service'den mevcut pozisyonu kontrol et
+            // Check existing position from Portfolio Service
             Map<String, Object> existingPortfolio = portfolioService.getPortfolioByUserAndAsset(userId, assetId);
 
-            // Transaction kaydı oluştur
+            // Create transaction record
             Transaction transaction = new Transaction();
             transaction.setUserId(userId);
             transaction.setAssetId(assetId);
@@ -92,12 +92,12 @@ public class TradingService {
             UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             Long userId = userService.getUserIdByUsername(userDetails.getUsername());
 
-            // Market Service'den asset bilgilerini al
+            // Get asset information from Market Service
             Map<String, Object> asset = marketService.getAssetBySymbol(request.getSymbol());
             Long assetId = Long.valueOf(asset.get("id").toString());
             BigDecimal currentPrice = new BigDecimal(asset.get("currentPrice").toString());
 
-            // Portfolio Service'den mevcut pozisyonu kontrol et
+            // Check existing position from Portfolio Service
             Map<String, Object> portfolio = portfolioService.getPortfolioByUserAndAsset(userId, assetId);
             if (portfolio == null) {
                 return ResponseEntity.badRequest()
@@ -113,10 +113,10 @@ public class TradingService {
 
             BigDecimal saleAmount = currentPrice.multiply(request.getQuantity());
 
-            // Wallet bakiyesini güncelle (pozitif amount ile)
+            // Update wallet balance (positive amount)
             userService.updateUserWalletBalance(userId, saleAmount);
 
-            // Transaction kaydı oluştur
+            // Create transaction record
             Transaction transaction = new Transaction();
             transaction.setUserId(userId);
             transaction.setAssetId(assetId);
