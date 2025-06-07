@@ -1,0 +1,219 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  
+  # Eureka Server - Service Discovery
+  eureka-server:
+    build: ./eureka-server
+    container_name: croesus-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - croesus-microservices
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Config Server - Configuration Management
+  config-server:
+    build: ./config-server
+    container_name: croesus-config
+    ports:
+      - "8888:8888"
+    depends_on:
+      - eureka-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - croesus-microservices
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # API Gateway - Single Entry Point
+  api-gateway:
+    build: ./api-gateway
+    container_name: croesus-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+      - config-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JWT_SECRET=${JWT_SECRET:-croesusSecretKeyForJwtTokenGenerationThatShouldBeLongEnoughForHmacSha256}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_USERNAME=${EUREKA_USERNAME:-admin}
+      - EUREKA_PASSWORD=${EUREKA_PASSWORD:-admin}
+    networks:
+      - croesus-microservices
+
+  # Database Service - Single PostgreSQL for all services
+  postgres-db:
+    image: postgres:15
+    container_name: croesus-postgres-db
+    environment:
+      POSTGRES_DB: croesus_db
+      POSTGRES_USER: ${DB_USERNAME:-croesus_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-croesus123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_db_data:/var/lib/postgresql/data
+    networks:
+      - croesus-microservices
+
+  # Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: croesus-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-croesus}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-croesus123}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - croesus-microservices
+
+  # Business Services
+  
+  # User Service
+  user-service:
+    build: ./user-service
+    container_name: croesus-user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - eureka-server
+      - config-server
+      - postgres-db
+      - rabbitmq
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/croesus_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-croesus_user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-croesus123}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_USERNAME=${EUREKA_USERNAME:-admin}
+      - EUREKA_PASSWORD=${EUREKA_PASSWORD:-admin}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET=${JWT_SECRET:-croesusSecretKeyForJwtTokenGenerationThatShouldBeLongEnoughForHmacSha256}
+    networks:
+      - croesus-microservices
+
+  # Portfolio Service
+  portfolio-service:
+    build: ./portfolio-service
+    container_name: croesus-portfolio-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - eureka-server
+      - config-server
+      - postgres-db
+      - rabbitmq
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/croesus_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-croesus_user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-croesus123}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_USERNAME=${EUREKA_USERNAME:-admin}
+      - EUREKA_PASSWORD=${EUREKA_PASSWORD:-admin}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET=${JWT_SECRET:-croesusSecretKeyForJwtTokenGenerationThatShouldBeLongEnoughForHmacSha256}
+    networks:
+      - croesus-microservices
+
+  # Wallet Service
+  wallet-service:
+    build: ./wallet-service
+    container_name: croesus-wallet-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - eureka-server
+      - config-server
+      - postgres-db
+      - rabbitmq
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/croesus_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-croesus_user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-croesus123}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_USERNAME=${EUREKA_USERNAME:-admin}
+      - EUREKA_PASSWORD=${EUREKA_PASSWORD:-admin}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET=${JWT_SECRET:-croesusSecretKeyForJwtTokenGenerationThatShouldBeLongEnoughForHmacSha256}
+    networks:
+      - croesus-microservices
+
+  # Trading Service
+  trading-service:
+    build: ./trading-service
+    container_name: croesus-trading-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - eureka-server
+      - config-server
+      - postgres-db
+      - rabbitmq
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/croesus_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-croesus_user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-croesus123}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_USERNAME=${EUREKA_USERNAME:-admin}
+      - EUREKA_PASSWORD=${EUREKA_PASSWORD:-admin}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET=${JWT_SECRET:-croesusSecretKeyForJwtTokenGenerationThatShouldBeLongEnoughForHmacSha256}
+    networks:
+      - croesus-microservices
+
+  # Market Service
+  market-service:
+    build: ./market-service
+    container_name: croesus-market-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - eureka-server
+      - config-server
+      - postgres-db
+      - rabbitmq
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/croesus_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-croesus_user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-croesus123}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_USERNAME=${EUREKA_USERNAME:-admin}
+      - EUREKA_PASSWORD=${EUREKA_PASSWORD:-admin}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET=${JWT_SECRET:-croesusSecretKeyForJwtTokenGenerationThatShouldBeLongEnoughForHmacSha256}
+      - COINGECKO_API_URL=https://api.coingecko.com/api/v3
+    networks:
+      - croesus-microservices
+
+volumes:
+  postgres_db_data:
+  rabbitmq_data:
+
+networks:
+  croesus-microservices:
+    driver: bridge 

@@ -1,0 +1,88 @@
+package com.bahadircolak.wallet.service;
+
+import com.bahadircolak.wallet.dto.response.TransactionSummaryResponse;
+import com.bahadircolak.wallet.model.WalletTransaction;
+import com.bahadircolak.wallet.model.WalletTransaction.TransactionType;
+import com.bahadircolak.wallet.model.WalletTransaction.TransactionStatus;
+import com.bahadircolak.wallet.repository.WalletTransactionRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class WalletTransactionService {
+
+    private final WalletTransactionRepository transactionRepository;
+    private final UserService userService;
+
+    public WalletTransaction saveTransaction(WalletTransaction transaction) {
+        return transactionRepository.save(transaction);
+    }
+
+    public List<WalletTransaction> getUserTransactions() {
+        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
+    }
+
+    public List<WalletTransaction> getUserTransactionsByType(TransactionType type) {
+        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return transactionRepository.findByUserIdAndType(userId, type);
+    }
+
+    public List<WalletTransaction> getUserTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return transactionRepository.findByUserIdAndTransactionDateBetween(userId, startDate, endDate);
+    }
+
+    public TransactionSummaryResponse getTransactionSummary() {
+        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+
+        TransactionSummaryResponse summary = new TransactionSummaryResponse();
+
+        // Toplam tutarları hesapla
+        summary.setTotalDeposits(getTotalAmountByTypeAndStatus(userId, TransactionType.DEPOSIT, TransactionStatus.COMPLETED));
+        summary.setTotalWithdrawals(getTotalAmountByTypeAndStatus(userId, TransactionType.WITHDRAWAL, TransactionStatus.COMPLETED));
+        summary.setTotalTransfersIn(getTotalAmountByTypeAndStatus(userId, TransactionType.TRANSFER_IN, TransactionStatus.COMPLETED));
+        summary.setTotalTransfersOut(getTotalAmountByTypeAndStatus(userId, TransactionType.TRANSFER_OUT, TransactionStatus.COMPLETED));
+
+        // İşlem sayılarını hesapla
+        summary.setDepositCount(getTransactionCountByType(userId, TransactionType.DEPOSIT));
+        summary.setWithdrawalCount(getTransactionCountByType(userId, TransactionType.WITHDRAWAL));
+        summary.setTransferCount(
+                getTransactionCountByType(userId, TransactionType.TRANSFER_IN) + 
+                getTransactionCountByType(userId, TransactionType.TRANSFER_OUT)
+        );
+
+        // Net tutarı hesapla (gelen - giden)
+        BigDecimal totalIn = summary.getTotalDeposits().add(summary.getTotalTransfersIn());
+        BigDecimal totalOut = summary.getTotalWithdrawals().add(summary.getTotalTransfersOut());
+        summary.setNetAmount(totalIn.subtract(totalOut));
+
+        return summary;
+    }
+
+    public List<WalletTransaction> getTransactionsByUserId(Long userId) {
+        return transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
+    }
+
+    private BigDecimal getTotalAmountByTypeAndStatus(Long userId, TransactionType type, TransactionStatus status) {
+        BigDecimal total = transactionRepository.getTotalAmountByUserIdAndTypeAndStatus(userId, type, status);
+        return total != null ? total : BigDecimal.ZERO;
+    }
+
+    private Long getTransactionCountByType(Long userId, TransactionType type) {
+        return transactionRepository.countByUserIdAndType(userId, type);
+    }
+} 
