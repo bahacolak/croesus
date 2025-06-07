@@ -50,11 +50,11 @@ app:
 # Service configurations
 services:
   user-service:
-    url: ${USER_SERVICE_URL:http://localhost:8081}
+    url: ${USER_SERVICE_URL:http://user-service:8081}
   portfolio-service:
-    url: ${PORTFOLIO_SERVICE_URL:http://localhost:8082}
+    url: ${PORTFOLIO_SERVICE_URL:http://portfolio-service:8082}
   market-service:
-    url: ${MARKET_SERVICE_URL:http://localhost:8085}
+    url: ${MARKET_SERVICE_URL:http://market-service:8085}
 
 management:
   endpoints:

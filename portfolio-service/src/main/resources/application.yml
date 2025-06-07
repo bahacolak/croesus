@@ -50,7 +50,7 @@ app:
 # Service configurations
 services:
   user-service:
-    url: ${USER_SERVICE_URL:http://localhost:8081}
+    url: ${USER_SERVICE_URL:http://user-service:8081}
 
 management:
   endpoints:
