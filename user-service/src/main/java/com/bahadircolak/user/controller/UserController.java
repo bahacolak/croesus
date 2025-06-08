@@ -46,6 +46,14 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/username/{username}/id")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<Long> getUserIdByUsername(@PathVariable String username) {
+        return userService.getUserByUsername(username)
+                .map(user -> ResponseEntity.ok(user.getId()))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
