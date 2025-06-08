@@ -35,6 +35,11 @@ public class GatewayConfig {
                         .path("/api/market/**", "/api/prices/**")
                         .uri("lb://market-service"))
                 
+                // Wallet Service Routes - Wallet operations
+                .route("wallet-service", r -> r
+                        .path("/api/wallet/**", "/api/transactions/**")
+                        .uri("lb://wallet-service"))
+                
                 // Health Check Route - System status
                 .route("health-check", r -> r
                         .path("/health")

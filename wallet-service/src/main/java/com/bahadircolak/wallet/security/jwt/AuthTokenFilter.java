@@ -2,6 +2,7 @@ package com.bahadircolak.wallet.security.jwt;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 @Slf4j
+@Component
 public class AuthTokenFilter extends OncePerRequestFilter {
 
     @Autowired
