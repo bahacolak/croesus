@@ -62,8 +62,8 @@ public class WalletService {
     }
 
     public WalletResponse getCurrentUserWallet() {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = ((com.bahadircolak.wallet.security.service.UserDetailsImpl) userDetails).getId();
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserIdByUsername(username);
         
         Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
                 .orElseGet(() -> createWalletForUser(userId));
@@ -73,8 +73,8 @@ public class WalletService {
 
     @Transactional
     public MessageResponse deposit(WalletTransactionRequest request) {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = ((com.bahadircolak.wallet.security.service.UserDetailsImpl) userDetails).getId();
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserIdByUsername(username);
 
         Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
                 .orElseGet(() -> createWalletForUser(userId));
@@ -103,8 +103,8 @@ public class WalletService {
 
     @Transactional
     public MessageResponse withdraw(WalletTransactionRequest request) {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = ((com.bahadircolak.wallet.security.service.UserDetailsImpl) userDetails).getId();
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserIdByUsername(username);
 
         Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
                 .orElseThrow(() -> new RuntimeException("Wallet not found for user: " + userId));
@@ -138,8 +138,8 @@ public class WalletService {
 
     @Transactional
     public MessageResponse transfer(TransferRequest request) {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long fromUserId = ((com.bahadircolak.wallet.security.service.UserDetailsImpl) userDetails).getId();
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long fromUserId = userService.getUserIdByUsername(username);
 
         // Check if target user exists
         if (!userService.userExists(request.getTargetUserId())) {

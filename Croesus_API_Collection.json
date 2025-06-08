@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Croesus Microservices API Collection",
-    "description": "Complete API collection for Croesus cryptocurrency trading platform microservices",
-    "version": "1.0.0",
+    "name": "Croesus Microservices API Collection - Updated",
+    "description": "Complete API collection for Croesus cryptocurrency trading platform microservices with improved JWT authentication and gateway routing",
+    "version": "2.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -24,7 +24,8 @@
     {
       "key": "gateway_port",
       "value": "8080",
-      "type": "string"
+      "type": "string",
+      "description": "API Gateway - Main entry point"
     },
     {
       "key": "user_service_port",
@@ -54,17 +55,26 @@
     {
       "key": "jwt_token",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "JWT token for authentication"
+    },
+    {
+      "key": "username",
+      "value": "",
+      "type": "string",
+      "description": "Current user's username"
     },
     {
       "key": "user_id",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "Current user's ID"
     }
   ],
   "item": [
     {
-      "name": "🔐 Authentication",
+      "name": "🔐 Authentication & Authorization",
+      "description": "User registration, login and JWT token management",
       "item": [
         {
           "name": "Register User",
@@ -81,9 +91,9 @@
               "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Test User\",\n  \"roles\": [\"user\"]\n}"
             },
             "url": {
-              "raw": "{{base_url}}:{{user_service_port}}/api/auth/signup",
+              "raw": "{{base_url}}:{{gateway_port}}/api/auth/signup",
               "host": ["{{base_url}}"],
-              "port": "{{user_service_port}}",
+              "port": "{{gateway_port}}",
               "path": ["api", "auth", "signup"]
             }
           },
@@ -92,9 +102,14 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
                   "if (pm.response.code === 200) {",
                   "    pm.test('User registered successfully', function () {",
-                  "        pm.response.to.have.status(200);",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.message).to.include('successfully');",
                   "    });",
                   "}"
                 ]
@@ -103,7 +118,58 @@
           ]
         },
         {
-          "name": "Login User",
+          "name": "Login User (Gateway)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}:{{gateway_port}}/api/auth/signin",
+              "host": ["{{base_url}}"],
+              "port": "{{gateway_port}}",
+              "path": ["api", "auth", "signin"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', response.accessToken);",
+                  "    pm.collectionVariables.set('username', response.username);",
+                  "    pm.collectionVariables.set('user_id', response.id);",
+                  "    ",
+                  "    pm.test('Login successful and JWT saved', function () {",
+                  "        pm.expect(response.accessToken).to.not.be.undefined;",
+                  "        pm.expect(response.accessToken).to.have.length.above(10);",
+                  "    });",
+                  "    ",
+                  "    pm.test('User details received', function () {",
+                  "        pm.expect(response.username).to.not.be.undefined;",
+                  "        pm.expect(response.id).to.not.be.undefined;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login User (Direct)",
           "request": {
             "method": "POST",
             "header": [
@@ -131,23 +197,16 @@
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    pm.collectionVariables.set('jwt_token', response.accessToken);",
+                  "    pm.collectionVariables.set('username', response.username);",
                   "    pm.collectionVariables.set('user_id', response.id);",
-                  "    pm.test('Login successful and JWT saved', function () {",
-                  "        pm.expect(response.accessToken).to.not.be.undefined;",
-                  "    });",
                   "}"
                 ]
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "👤 User Service",
-      "item": [
+        },
         {
-          "name": "Get Current User",
+          "name": "Validate JWT Token",
           "request": {
             "method": "GET",
             "header": [
@@ -162,10 +221,35 @@
               "port": "{{user_service_port}}",
               "path": ["api", "users", "current"]
             }
-          }
-        },
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('JWT token is valid', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('User authenticated successfully', function () {",
+                  "        pm.expect(response.username).to.not.be.undefined;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👤 User Management",
+      "description": "User profile and account management",
+      "item": [
         {
-          "name": "Get All Users (Admin)",
+          "name": "Get Current User Profile",
           "request": {
             "method": "GET",
             "header": [
@@ -175,12 +259,29 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}:{{user_service_port}}/api/users",
+              "raw": "{{base_url}}:{{gateway_port}}/api/users/current",
               "host": ["{{base_url}}"],
-              "port": "{{user_service_port}}",
-              "path": ["api", "users"]
+              "port": "{{gateway_port}}",
+              "path": ["api", "users", "current"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User profile received', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.username).to.eql(pm.collectionVariables.get('username'));",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get User by ID",
@@ -201,7 +302,7 @@
           }
         },
         {
-          "name": "Get User Wallet Balance",
+          "name": "Get All Users (Admin Only)",
           "request": {
             "method": "GET",
             "header": [
@@ -211,17 +312,50 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}:{{user_service_port}}/api/users/{{user_id}}/wallet/balance",
+              "raw": "{{base_url}}:{{user_service_port}}/api/users",
               "host": ["{{base_url}}"],
               "port": "{{user_service_port}}",
-              "path": ["api", "users", "{{user_id}}", "wallet", "balance"]
+              "path": ["api", "users"]
             }
           }
+        },
+        {
+          "name": "Get User ID by Username (Internal)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}:{{user_service_port}}/api/users/username/{{username}}/id",
+              "host": ["{{base_url}}"],
+              "port": "{{user_service_port}}",
+              "path": ["api", "users", "username", "{{username}}", "id"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User ID retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const userId = pm.response.text();",
+                  "    pm.expect(parseInt(userId)).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "💰 Wallet Service",
+      "name": "💰 Wallet Management",
+      "description": "Wallet operations with improved JWT authentication",
       "item": [
         {
           "name": "Get Current User Wallet",
@@ -234,12 +368,27 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}:{{wallet_service_port}}/api/wallet",
+              "raw": "{{base_url}}:{{gateway_port}}/api/wallet",
               "host": ["{{base_url}}"],
-              "port": "{{wallet_service_port}}",
+              "port": "{{gateway_port}}",
               "path": ["api", "wallet"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Wallet retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.balance).to.not.be.undefined;",
+                  "    pm.expect(response.currencyCode).to.eql('USD');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get Current User Balance",
@@ -257,7 +406,22 @@
               "port": "{{wallet_service_port}}",
               "path": ["api", "wallet", "balance"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Balance retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const balance = parseFloat(pm.response.text());",
+                  "    pm.expect(balance).to.be.a('number');",
+                  "    pm.expect(balance).to.be.at.least(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Deposit Money",
@@ -275,7 +439,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": 1000.00,\n  \"description\": \"Initial deposit\",\n  \"referenceId\": \"DEP001\"\n}"
+              "raw": "{\n  \"amount\": 1000.00,\n  \"description\": \"Initial deposit via improved JWT auth\",\n  \"referenceId\": \"DEP{{$timestamp}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}:{{wallet_service_port}}/api/wallet/deposit",
@@ -283,7 +447,21 @@
               "port": "{{wallet_service_port}}",
               "path": ["api", "wallet", "deposit"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Deposit successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('successful');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Withdraw Money",
@@ -301,7 +479,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": 100.00,\n  \"description\": \"Cash withdrawal\",\n  \"referenceId\": \"WIT001\"\n}"
+              "raw": "{\n  \"amount\": 100.00,\n  \"description\": \"Cash withdrawal\",\n  \"referenceId\": \"WIT{{$timestamp}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}:{{wallet_service_port}}/api/wallet/withdraw",
@@ -309,7 +487,21 @@
               "port": "{{wallet_service_port}}",
               "path": ["api", "wallet", "withdraw"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Withdrawal successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('successful');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Transfer Money",
@@ -327,7 +519,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"targetUserId\": 2,\n  \"amount\": 50.00,\n  \"description\": \"Transfer to friend\"\n}"
+              "raw": "{\n  \"targetUserId\": 2,\n  \"amount\": 50.00,\n  \"description\": \"Transfer to friend via secure JWT\"\n}"
             },
             "url": {
               "raw": "{{base_url}}:{{wallet_service_port}}/api/wallet/transfer",
@@ -335,7 +527,21 @@
               "port": "{{wallet_service_port}}",
               "path": ["api", "wallet", "transfer"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Transfer successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('successful');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get Wallet Transactions",
@@ -353,7 +559,21 @@
               "port": "{{wallet_service_port}}",
               "path": ["api", "transactions"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Transactions retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get Transaction Summary",
@@ -376,10 +596,38 @@
       ]
     },
     {
-      "name": "📈 Market Service",
+      "name": "📈 Market Data & Crypto",
+      "description": "Cryptocurrency market data and pricing",
       "item": [
         {
-          "name": "Get All Cryptocurrencies",
+          "name": "Get All Cryptocurrencies (Gateway)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}:{{gateway_port}}/api/crypto",
+              "host": ["{{base_url}}"],
+              "port": "{{gateway_port}}",
+              "path": ["api", "crypto"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Crypto list retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "    pm.expect(response.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Cryptocurrencies (Direct)",
           "request": {
             "method": "GET",
             "url": {
@@ -400,7 +648,22 @@
               "port": "{{market_service_port}}",
               "path": ["api", "crypto", "bitcoin"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Bitcoin data retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.symbol).to.eql('bitcoin');",
+                  "    pm.expect(response.current_price).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get Crypto Price",
@@ -455,35 +718,12 @@
               "path": ["api", "crypto", "losers"]
             }
           }
-        },
-        {
-          "name": "Get Market Overview",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{base_url}}:{{market_service_port}}/api/market/overview",
-              "host": ["{{base_url}}"],
-              "port": "{{market_service_port}}",
-              "path": ["api", "market", "overview"]
-            }
-          }
-        },
-        {
-          "name": "Refresh Market Data",
-          "request": {
-            "method": "POST",
-            "url": {
-              "raw": "{{base_url}}:{{market_service_port}}/api/market/refresh",
-              "host": ["{{base_url}}"],
-              "port": "{{market_service_port}}",
-              "path": ["api", "market", "refresh"]
-            }
-          }
         }
       ]
     },
     {
-      "name": "🔄 Trading Service",
+      "name": "💹 Trading Operations",
+      "description": "Buy/Sell operations with secure authentication",
       "item": [
         {
           "name": "Buy Asset",
@@ -501,7 +741,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"symbol\": \"bitcoin\",\n  \"quantity\": 0.001,\n  \"description\": \"Buy some Bitcoin\"\n}"
+              "raw": "{\n  \"symbol\": \"bitcoin\",\n  \"quantity\": 0.001,\n  \"description\": \"Buy Bitcoin with secure JWT\"\n}"
             },
             "url": {
               "raw": "{{base_url}}:{{trading_service_port}}/api/trade/buy",
@@ -509,7 +749,21 @@
               "port": "{{trading_service_port}}",
               "path": ["api", "trade", "buy"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Buy order successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('successful');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Sell Asset",
@@ -527,7 +781,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"symbol\": \"bitcoin\",\n  \"quantity\": 0.0005,\n  \"description\": \"Sell some Bitcoin\"\n}"
+              "raw": "{\n  \"symbol\": \"bitcoin\",\n  \"quantity\": 0.0005,\n  \"description\": \"Sell Bitcoin with secure JWT\"\n}"
             },
             "url": {
               "raw": "{{base_url}}:{{trading_service_port}}/api/trade/sell",
@@ -535,10 +789,24 @@
               "port": "{{trading_service_port}}",
               "path": ["api", "trade", "sell"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Sell order successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('successful');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Get User Transactions",
+          "name": "Get User Trading History",
           "request": {
             "method": "GET",
             "header": [
@@ -553,7 +821,21 @@
               "port": "{{trading_service_port}}",
               "path": ["api", "transactions"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Trading history retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get Transactions by Type",
@@ -574,7 +856,7 @@
           }
         },
         {
-          "name": "Get Transaction Summary",
+          "name": "Get Trading Summary",
           "request": {
             "method": "GET",
             "header": [
@@ -594,7 +876,8 @@
       ]
     },
     {
-      "name": "💼 Portfolio Service",
+      "name": "💼 Portfolio Management",
+      "description": "Portfolio tracking and asset management",
       "item": [
         {
           "name": "Get User Portfolio",
@@ -612,7 +895,21 @@
               "port": "{{portfolio_service_port}}",
               "path": ["api", "portfolio"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Portfolio retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get Portfolio Summary",
@@ -630,7 +927,21 @@
               "port": "{{portfolio_service_port}}",
               "path": ["api", "portfolio", "summary"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Portfolio summary retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.totalValue).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get All Assets",
@@ -659,7 +970,8 @@
       ]
     },
     {
-      "name": "🌐 API Gateway",
+      "name": "🌐 API Gateway Routes",
+      "description": "Gateway routing tests and health checks",
       "item": [
         {
           "name": "Gateway Health Check",
@@ -671,32 +983,60 @@
               "port": "{{gateway_port}}",
               "path": ["actuator", "health"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Gateway is healthy', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Gateway Login (Routed)",
+          "name": "Gateway Route - User Service",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
-            },
             "url": {
-              "raw": "{{base_url}}:{{gateway_port}}/api/auth/signin",
+              "raw": "{{base_url}}:{{gateway_port}}/api/users/current",
               "host": ["{{base_url}}"],
               "port": "{{gateway_port}}",
-              "path": ["api", "auth", "signin"]
+              "path": ["api", "users", "current"]
             }
           }
         },
         {
-          "name": "Gateway Market Data (Routed)",
+          "name": "Gateway Route - Wallet Service",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}:{{gateway_port}}/api/wallet",
+              "host": ["{{base_url}}"],
+              "port": "{{gateway_port}}",
+              "path": ["api", "wallet"]
+            }
+          }
+        },
+        {
+          "name": "Gateway Route - Market Service",
           "request": {
             "method": "GET",
             "url": {
@@ -710,7 +1050,8 @@
       ]
     },
     {
-      "name": "🔧 Health Checks",
+      "name": "🔧 Health & Monitoring",
+      "description": "Service health checks and monitoring endpoints",
       "item": [
         {
           "name": "User Service Health",
@@ -720,6 +1061,32 @@
               "raw": "{{base_url}}:{{user_service_port}}/actuator/health",
               "host": ["{{base_url}}"],
               "port": "{{user_service_port}}",
+              "path": ["actuator", "health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User Service is healthy', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wallet Service Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}:{{wallet_service_port}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "port": "{{wallet_service_port}}",
               "path": ["actuator", "health"]
             }
           }
@@ -732,18 +1099,6 @@
               "raw": "{{base_url}}:{{portfolio_service_port}}/actuator/health",
               "host": ["{{base_url}}"],
               "port": "{{portfolio_service_port}}",
-              "path": ["actuator", "health"]
-            }
-          }
-        },
-        {
-          "name": "Wallet Service Health",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{base_url}}:{{wallet_service_port}}/actuator/health",
-              "host": ["{{base_url}}"],
-              "port": "{{wallet_service_port}}",
               "path": ["actuator", "health"]
             }
           }
@@ -771,6 +1126,164 @@
               "path": ["actuator", "health"]
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "🧪 Testing Scenarios",
+      "description": "Complete user flow testing scenarios",
+      "item": [
+        {
+          "name": "Complete User Journey Test",
+          "item": [
+            {
+              "name": "1. Register New User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"journey_user_{{$timestamp}}\",\n  \"email\": \"journey{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Journey Test User\",\n  \"roles\": [\"user\"]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}:{{gateway_port}}/api/auth/signup",
+                  "host": ["{{base_url}}"],
+                  "port": "{{gateway_port}}",
+                  "path": ["api", "auth", "signup"]
+                }
+              }
+            },
+            {
+              "name": "2. Login User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"journey_user_{{$timestamp}}\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}:{{gateway_port}}/api/auth/signin",
+                  "host": ["{{base_url}}"],
+                  "port": "{{gateway_port}}",
+                  "path": ["api", "auth", "signin"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const response = pm.response.json();",
+                      "    pm.collectionVariables.set('jwt_token', response.accessToken);",
+                      "    pm.collectionVariables.set('username', response.username);",
+                      "    pm.collectionVariables.set('user_id', response.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Get Wallet",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}:{{wallet_service_port}}/api/wallet",
+                  "host": ["{{base_url}}"],
+                  "port": "{{wallet_service_port}}",
+                  "path": ["api", "wallet"]
+                }
+              }
+            },
+            {
+              "name": "4. Deposit Money",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 5000.00,\n  \"description\": \"Journey test deposit\",\n  \"referenceId\": \"JOURNEY_{{$timestamp}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}:{{wallet_service_port}}/api/wallet/deposit",
+                  "host": ["{{base_url}}"],
+                  "port": "{{wallet_service_port}}",
+                  "path": ["api", "wallet", "deposit"]
+                }
+              }
+            },
+            {
+              "name": "5. Buy Crypto",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"bitcoin\",\n  \"quantity\": 0.01,\n  \"description\": \"Journey test purchase\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}:{{trading_service_port}}/api/trade/buy",
+                  "host": ["{{base_url}}"],
+                  "port": "{{trading_service_port}}",
+                  "path": ["api", "trade", "buy"]
+                }
+              }
+            },
+            {
+              "name": "6. Check Portfolio",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}:{{portfolio_service_port}}/api/portfolio/summary",
+                  "host": ["{{base_url}}"],
+                  "port": "{{portfolio_service_port}}",
+                  "path": ["api", "portfolio", "summary"]
+                }
+              }
+            }
+          ]
         }
       ]
     }
