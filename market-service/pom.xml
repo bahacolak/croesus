@@ -77,7 +77,12 @@
             <scope>runtime</scope>
         </dependency>
 
-
+        <!-- Common Library -->
+        <dependency>
+            <groupId>com.bahadircolak</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0.0</version>
+        </dependency>
 
         <!-- Test -->
         <dependency>
