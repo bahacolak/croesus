@@ -8,6 +8,7 @@ import com.bahadircolak.wallet.model.Wallet;
 import com.bahadircolak.wallet.model.WalletTransaction;
 import com.bahadircolak.wallet.model.WalletTransaction.TransactionType;
 import com.bahadircolak.wallet.repository.WalletRepository;
+import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,7 +26,7 @@ public class WalletService {
 
     private final WalletRepository walletRepository;
     private final WalletTransactionService transactionService;
-    private final UserService userService;
+    private final UserClient userClient;
 
     @Transactional
     public WalletResponse createWallet(Long userId) {
@@ -34,7 +35,7 @@ public class WalletService {
         }
 
         // Check if user exists
-        if (!userService.userExists(userId)) {
+        if (!userClient.userExists(userId)) {
             throw new RuntimeException("User not found: " + userId);
         }
 
@@ -63,7 +64,7 @@ public class WalletService {
 
     public WalletResponse getCurrentUserWallet() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = userService.getUserIdByUsername(username);
+        Long userId = userClient.getUserIdByUsername(username);
         
         Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
                 .orElseGet(() -> createWalletForUser(userId));
@@ -74,7 +75,7 @@ public class WalletService {
     @Transactional
     public MessageResponse deposit(WalletTransactionRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = userService.getUserIdByUsername(username);
+        Long userId = userClient.getUserIdByUsername(username);
 
         Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
                 .orElseGet(() -> createWalletForUser(userId));
@@ -104,7 +105,7 @@ public class WalletService {
     @Transactional
     public MessageResponse withdraw(WalletTransactionRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = userService.getUserIdByUsername(username);
+        Long userId = userClient.getUserIdByUsername(username);
 
         Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
                 .orElseThrow(() -> new RuntimeException("Wallet not found for user: " + userId));
@@ -139,10 +140,10 @@ public class WalletService {
     @Transactional
     public MessageResponse transfer(TransferRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long fromUserId = userService.getUserIdByUsername(username);
+        Long fromUserId = userClient.getUserIdByUsername(username);
 
         // Check if target user exists
-        if (!userService.userExists(request.getTargetUserId())) {
+        if (!userClient.userExists(request.getTargetUserId())) {
             throw new RuntimeException("Target user not found: " + request.getTargetUserId());
         }
 

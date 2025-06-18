@@ -6,6 +6,7 @@ import com.bahadircolak.trading.dto.response.TradeResponse;
 import com.bahadircolak.trading.model.Transaction;
 import com.bahadircolak.trading.model.Transaction.TransactionType;
 import com.bahadircolak.trading.repository.TransactionRepository;
+import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TradingService {
 
-    private final UserService userService;
+    private final UserClient userClient;
     private final MarketService marketService;
     private final PortfolioService portfolioService;
     private final TransactionRepository transactionRepository;
@@ -33,7 +34,7 @@ public class TradingService {
     public ResponseEntity<?> buyAsset(TradeRequest request) {
         try {
             UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+            Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
 
             // Get asset information from Market Service
             Map<String, Object> asset = marketService.getAssetBySymbol(request.getSymbol());
@@ -43,14 +44,14 @@ public class TradingService {
             BigDecimal totalCost = currentPrice.multiply(request.getQuantity());
 
             // Check wallet balance from User Service
-            BigDecimal walletBalance = userService.getUserWalletBalance(userId);
+            BigDecimal walletBalance = userClient.getUserWalletBalance(userId);
             if (walletBalance.compareTo(totalCost) < 0) {
                 return ResponseEntity.badRequest()
                         .body(new MessageResponse("Insufficient balance. Required: " + totalCost + ", Current: " + walletBalance));
             }
 
             // Update wallet balance (negative amount)
-            userService.updateUserWalletBalance(userId, totalCost.negate());
+            userClient.updateUserWalletBalance(userId, totalCost.negate());
 
             // Check existing position from Portfolio Service
             Map<String, Object> existingPortfolio = portfolioService.getPortfolioByUserAndAsset(userId, assetId);
@@ -90,7 +91,7 @@ public class TradingService {
     public ResponseEntity<?> sellAsset(TradeRequest request) {
         try {
             UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+            Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
 
             // Get asset information from Market Service
             Map<String, Object> asset = marketService.getAssetBySymbol(request.getSymbol());
@@ -114,7 +115,7 @@ public class TradingService {
             BigDecimal saleAmount = currentPrice.multiply(request.getQuantity());
 
             // Update wallet balance (positive amount)
-            userService.updateUserWalletBalance(userId, saleAmount);
+            userClient.updateUserWalletBalance(userId, saleAmount);
 
             // Create transaction record
             Transaction transaction = new Transaction();

@@ -26,7 +26,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+    public ResponseEntity<User> getUserById(@PathVariable("id") Long id) {
         return userService.getUserById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -40,7 +40,7 @@ public class UserController {
 
     @GetMapping("/username/{username}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<User> getUserByUsername(@PathVariable String username) {
+    public ResponseEntity<User> getUserByUsername(@PathVariable("username") String username) {
         return userService.getUserByUsername(username)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -48,7 +48,7 @@ public class UserController {
 
     @GetMapping("/username/{username}/id")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public ResponseEntity<Long> getUserIdByUsername(@PathVariable String username) {
+    public ResponseEntity<Long> getUserIdByUsername(@PathVariable("username") String username) {
         return userService.getUserByUsername(username)
                 .map(user -> ResponseEntity.ok(user.getId()))
                 .orElse(ResponseEntity.notFound().build());
@@ -56,7 +56,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+    public ResponseEntity<User> updateUser(@PathVariable("id") Long id, @RequestBody User user) {
         if (!userService.getUserById(id).isPresent()) {
             return ResponseEntity.notFound().build();
         }
@@ -66,7 +66,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable("id") Long id) {
         if (!userService.getUserById(id).isPresent()) {
             return ResponseEntity.notFound().build();
         }
@@ -76,13 +76,13 @@ public class UserController {
 
     @GetMapping("/{id}/wallet/balance")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public ResponseEntity<BigDecimal> getWalletBalance(@PathVariable Long id) {
+    public ResponseEntity<BigDecimal> getWalletBalance(@PathVariable("id") Long id) {
         return ResponseEntity.ok(userService.getWalletBalance(id));
     }
 
     @PostMapping("/{id}/wallet/update")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public ResponseEntity<User> updateWalletBalance(@PathVariable Long id, @RequestParam BigDecimal amount) {
+    public ResponseEntity<User> updateWalletBalance(@PathVariable("id") Long id, @RequestParam BigDecimal amount) {
         return ResponseEntity.ok(userService.updateWalletBalance(id, amount));
     }
 } 

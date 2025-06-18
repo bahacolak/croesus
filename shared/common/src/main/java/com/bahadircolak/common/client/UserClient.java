@@ -1,4 +1,4 @@
-package com.bahadircolak.wallet.service;
+package com.bahadircolak.common.client;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,16 +8,17 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.Map;
 
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class UserService {
+public class UserClient {
 
     private final RestTemplate restTemplate;
 
@@ -28,12 +29,7 @@ public class UserService {
         try {
             String url = userServiceUrl + "/api/users/username/" + username + "/id";
             
-            HttpHeaders headers = new HttpHeaders();
-            String authHeader = (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
-            if (authHeader != null) {
-                headers.set("Authorization", "Bearer " + authHeader);
-            }
-
+            HttpHeaders headers = createAuthHeaders();
             RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.GET, URI.create(url));
             ResponseEntity<Long> response = restTemplate.exchange(request, Long.class);
             
@@ -48,12 +44,7 @@ public class UserService {
         try {
             String url = userServiceUrl + "/api/users/" + userId;
             
-            HttpHeaders headers = new HttpHeaders();
-            String authHeader = (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
-            if (authHeader != null) {
-                headers.set("Authorization", "Bearer " + authHeader);
-            }
-
+            HttpHeaders headers = createAuthHeaders();
             RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.GET, URI.create(url));
             ResponseEntity<Map> response = restTemplate.exchange(request, Map.class);
             
@@ -71,5 +62,43 @@ public class UserService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public BigDecimal getUserWalletBalance(Long userId) {
+        try {
+            String url = userServiceUrl + "/api/users/" + userId + "/wallet/balance";
+            
+            HttpHeaders headers = createAuthHeaders();
+            RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.GET, URI.create(url));
+            ResponseEntity<BigDecimal> response = restTemplate.exchange(request, BigDecimal.class);
+            
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("Error fetching wallet balance for user: {}", userId, e);
+            throw new RuntimeException("Error fetching wallet balance for user: " + userId);
+        }
+    }
+
+    public void updateUserWalletBalance(Long userId, BigDecimal amount) {
+        try {
+            String url = userServiceUrl + "/api/users/" + userId + "/wallet/update?amount=" + amount;
+            
+            HttpHeaders headers = createAuthHeaders();
+            RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.POST, URI.create(url));
+            restTemplate.exchange(request, Void.class);
+            
+        } catch (Exception e) {
+            log.error("Error updating wallet balance for user: {} with amount: {}", userId, amount, e);
+            throw new RuntimeException("Error updating wallet balance for user: " + userId);
+        }
+    }
+
+    private HttpHeaders createAuthHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        String authHeader = (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
+        if (authHeader != null) {
+            headers.set("Authorization", "Bearer " + authHeader);
+        }
+        return headers;
     }
 } 

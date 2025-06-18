@@ -3,6 +3,7 @@ package com.bahadircolak.trading.service;
 import com.bahadircolak.trading.model.Transaction;
 import com.bahadircolak.trading.model.Transaction.TransactionType;
 import com.bahadircolak.trading.repository.TransactionRepository;
+import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,29 +18,29 @@ import java.util.List;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
-    private final UserService userService;
+    private final UserClient userClient;
 
     public List<Transaction> getUserTransactions() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
         return transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
     }
 
     public List<Transaction> getUserTransactionsByType(TransactionType type) {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
         return transactionRepository.findByUserIdAndType(userId, type);
     }
 
     public List<Transaction> getUserTransactionsByAsset(Long assetId) {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
         return transactionRepository.findByUserIdAndAssetId(userId, assetId);
     }
 
     public BigDecimal getTotalAmountByType(TransactionType type) {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
         BigDecimal total = transactionRepository.getTotalAmountByUserIdAndType(userId, type);
         return total != null ? total : BigDecimal.ZERO;
     }

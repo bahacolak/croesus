@@ -2,6 +2,7 @@ package com.bahadircolak.portfolio.service;
 
 import com.bahadircolak.portfolio.model.Portfolio;
 import com.bahadircolak.portfolio.repository.PortfolioRepository;
+import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,7 +16,7 @@ import java.util.List;
 public class PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
-    private final UserService userService;
+    private final UserClient userClient;
 
     public List<Portfolio> getUserPortfolio() {
         Long userId = getCurrentUserId();
@@ -48,6 +49,6 @@ public class PortfolioService {
 
     private Long getCurrentUserId() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userService.getUserIdByUsername(userDetails.getUsername());
+        return userClient.getUserIdByUsername(userDetails.getUsername());
     }
 } 

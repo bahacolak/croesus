@@ -5,6 +5,7 @@ import com.bahadircolak.wallet.model.WalletTransaction;
 import com.bahadircolak.wallet.model.WalletTransaction.TransactionType;
 import com.bahadircolak.wallet.model.WalletTransaction.TransactionStatus;
 import com.bahadircolak.wallet.repository.WalletTransactionRepository;
+import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,7 +22,7 @@ import java.util.List;
 public class WalletTransactionService {
 
     private final WalletTransactionRepository transactionRepository;
-    private final UserService userService;
+    private final UserClient userClient;
 
     public WalletTransaction saveTransaction(WalletTransaction transaction) {
         return transactionRepository.save(transaction);
@@ -29,25 +30,25 @@ public class WalletTransactionService {
 
     public List<WalletTransaction> getUserTransactions() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
         return transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
     }
 
     public List<WalletTransaction> getUserTransactionsByType(TransactionType type) {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
         return transactionRepository.findByUserIdAndType(userId, type);
     }
 
     public List<WalletTransaction> getUserTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
         return transactionRepository.findByUserIdAndTransactionDateBetween(userId, startDate, endDate);
     }
 
     public TransactionSummaryResponse getTransactionSummary() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
 
         TransactionSummaryResponse summary = new TransactionSummaryResponse();
 
