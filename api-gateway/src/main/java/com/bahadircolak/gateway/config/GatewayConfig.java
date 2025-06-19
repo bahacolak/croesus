@@ -32,7 +32,7 @@ public class GatewayConfig {
                 
                 // Market Service Routes - Market data
                 .route("market-service", r -> r
-                        .path("/api/market/**", "/api/prices/**")
+                        .path("/api/market/**", "/api/prices/**", "/api/crypto/**")
                         .uri("lb://market-service"))
                 
                 // Wallet Service Routes - Wallet operations
