@@ -19,7 +19,7 @@ public class AssetController {
     private final MarketService marketService;
 
     @GetMapping("/{symbol}")
-    public ResponseEntity<AssetResponse> getAssetBySymbol(@PathVariable String symbol) {
+    public ResponseEntity<AssetResponse> getAssetBySymbol(@PathVariable("symbol") String symbol) {
         try {
             Optional<AssetResponse> asset = marketService.getAssetBySymbol(symbol);
             if (asset.isPresent()) {
@@ -33,7 +33,7 @@ public class AssetController {
     }
 
     @GetMapping("/{symbol}/price")
-    public ResponseEntity<BigDecimal> getAssetPrice(@PathVariable String symbol) {
+    public ResponseEntity<BigDecimal> getAssetPrice(@PathVariable("symbol") String symbol) {
         try {
             BigDecimal price = marketService.getAssetPrice(symbol);
             return ResponseEntity.ok(price);
@@ -47,7 +47,7 @@ public class AssetController {
     }
 
     @GetMapping("/id/{coinId}")
-    public ResponseEntity<AssetResponse> getAssetById(@PathVariable String coinId) {
+    public ResponseEntity<AssetResponse> getAssetById(@PathVariable("coinId") String coinId) {
         try {
             Optional<AssetResponse> asset = marketService.getAssetById(coinId);
             if (asset.isPresent()) {

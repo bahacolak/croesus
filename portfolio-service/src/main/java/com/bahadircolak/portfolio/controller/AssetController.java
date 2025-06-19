@@ -23,19 +23,19 @@ public class AssetController {
     }
 
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<Asset>> getAssetsByType(@PathVariable AssetType type) {
+    public ResponseEntity<List<Asset>> getAssetsByType(@PathVariable("type") AssetType type) {
         return ResponseEntity.ok(assetService.getAssetsByType(type));
     }
 
     @GetMapping("/{symbol}")
-    public ResponseEntity<Asset> getAssetBySymbol(@PathVariable String symbol) {
+    public ResponseEntity<Asset> getAssetBySymbol(@PathVariable("symbol") String symbol) {
         return assetService.getAssetBySymbol(symbol)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/id/{id}")
-    public ResponseEntity<Asset> getAssetById(@PathVariable Long id) {
+    public ResponseEntity<Asset> getAssetById(@PathVariable("id") Long id) {
         return assetService.getAssetById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

@@ -27,12 +27,12 @@ public class TransactionController {
     }
 
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<Transaction>> getUserTransactionsByType(@PathVariable TransactionType type) {
+    public ResponseEntity<List<Transaction>> getUserTransactionsByType(@PathVariable("type") TransactionType type) {
         return ResponseEntity.ok(transactionService.getUserTransactionsByType(type));
     }
 
     @GetMapping("/asset/{assetId}")
-    public ResponseEntity<List<Transaction>> getUserTransactionsByAsset(@PathVariable Long assetId) {
+    public ResponseEntity<List<Transaction>> getUserTransactionsByAsset(@PathVariable("assetId") Long assetId) {
         return ResponseEntity.ok(transactionService.getUserTransactionsByAsset(assetId));
     }
 
@@ -48,8 +48,8 @@ public class TransactionController {
 
     @GetMapping("/between")
     public ResponseEntity<List<Transaction>> getTransactionsBetweenDates(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         return ResponseEntity.ok(transactionService.getTransactionsBetweenDates(startDate, endDate));
     }
 } 

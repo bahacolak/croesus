@@ -67,7 +67,7 @@ public class MarketController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<AssetResponse>> searchAssets(@RequestParam String q) {
+    public ResponseEntity<List<AssetResponse>> searchAssets(@RequestParam("q") String q) {
         try {
             List<AssetResponse> assets = marketService.searchAssets(q);
             return ResponseEntity.ok(assets);

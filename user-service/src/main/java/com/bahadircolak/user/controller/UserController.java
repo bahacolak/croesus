@@ -82,7 +82,7 @@ public class UserController {
 
     @PostMapping("/{id}/wallet/update")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public ResponseEntity<User> updateWalletBalance(@PathVariable("id") Long id, @RequestParam BigDecimal amount) {
+    public ResponseEntity<User> updateWalletBalance(@PathVariable("id") Long id, @RequestParam("amount") BigDecimal amount) {
         return ResponseEntity.ok(userService.updateWalletBalance(id, amount));
     }
 } 

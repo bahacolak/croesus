@@ -34,7 +34,7 @@ public class TransactionController {
     }
 
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<WalletTransaction>> getUserTransactionsByType(@PathVariable TransactionType type) {
+    public ResponseEntity<List<WalletTransaction>> getUserTransactionsByType(@PathVariable("type") TransactionType type) {
         try {
             List<WalletTransaction> transactions = transactionService.getUserTransactionsByType(type);
             return ResponseEntity.ok(transactions);
@@ -46,8 +46,8 @@ public class TransactionController {
 
     @GetMapping("/range")
     public ResponseEntity<List<WalletTransaction>> getUserTransactionsByDateRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         try {
             List<WalletTransaction> transactions = transactionService.getUserTransactionsByDateRange(startDate, endDate);
             return ResponseEntity.ok(transactions);
@@ -69,7 +69,7 @@ public class TransactionController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<WalletTransaction>> getTransactionsByUserId(@PathVariable Long userId) {
+    public ResponseEntity<List<WalletTransaction>> getTransactionsByUserId(@PathVariable("userId") Long userId) {
         try {
             List<WalletTransaction> transactions = transactionService.getTransactionsByUserId(userId);
             return ResponseEntity.ok(transactions);

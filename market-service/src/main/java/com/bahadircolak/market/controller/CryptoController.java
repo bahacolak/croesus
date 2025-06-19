@@ -32,7 +32,7 @@ public class CryptoController {
     }
 
     @GetMapping("/{symbol}")
-    public ResponseEntity<CryptoCurrency> getCryptoCurrencyBySymbol(@PathVariable String symbol) {
+    public ResponseEntity<CryptoCurrency> getCryptoCurrencyBySymbol(@PathVariable("symbol") String symbol) {
         try {
             Optional<CryptoCurrency> crypto = cryptoService.getCryptoCurrencyBySymbol(symbol);
             if (crypto.isPresent()) {
@@ -46,7 +46,7 @@ public class CryptoController {
     }
 
     @GetMapping("/{symbol}/price")
-    public ResponseEntity<BigDecimal> getCryptoPriceBySymbol(@PathVariable String symbol) {
+    public ResponseEntity<BigDecimal> getCryptoPriceBySymbol(@PathVariable("symbol") String symbol) {
         try {
             BigDecimal price = cryptoService.getCryptoPriceBySymbol(symbol);
             return ResponseEntity.ok(price);
@@ -60,7 +60,7 @@ public class CryptoController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<CryptoCurrency>> searchCryptoCurrencies(@RequestParam String q) {
+    public ResponseEntity<List<CryptoCurrency>> searchCryptoCurrencies(@RequestParam("q") String q) {
         try {
             List<CryptoCurrency> cryptos = cryptoService.searchCryptoCurrencies(q);
             return ResponseEntity.ok(cryptos);

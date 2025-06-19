@@ -32,7 +32,7 @@ public class PortfolioController {
     }
 
     @GetMapping("/user/{userId}/asset/{assetId}")
-    public ResponseEntity<Portfolio> getPortfolioByUserAndAsset(@PathVariable Long userId, @PathVariable Long assetId) {
+    public ResponseEntity<Portfolio> getPortfolioByUserAndAsset(@PathVariable("userId") Long userId, @PathVariable("assetId") Long assetId) {
         Portfolio portfolio = portfolioService.getPortfolioByUserAndAsset(userId, assetId);
         if (portfolio != null) {
             return ResponseEntity.ok(portfolio);

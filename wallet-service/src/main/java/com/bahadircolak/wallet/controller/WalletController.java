@@ -45,7 +45,7 @@ public class WalletController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<WalletResponse> getWalletByUserId(@PathVariable Long userId) {
+    public ResponseEntity<WalletResponse> getWalletByUserId(@PathVariable("userId") Long userId) {
         try {
             WalletResponse wallet = walletService.getWalletByUserId(userId);
             return ResponseEntity.ok(wallet);
@@ -59,7 +59,7 @@ public class WalletController {
     }
 
     @GetMapping("/{userId}/balance")
-    public ResponseEntity<BigDecimal> getUserBalance(@PathVariable Long userId) {
+    public ResponseEntity<BigDecimal> getUserBalance(@PathVariable("userId") Long userId) {
         try {
             BigDecimal balance = walletService.getBalance(userId);
             return ResponseEntity.ok(balance);
@@ -117,7 +117,7 @@ public class WalletController {
     }
 
     @PostMapping("/{userId}/create")
-    public ResponseEntity<WalletResponse> createWallet(@PathVariable Long userId) {
+    public ResponseEntity<WalletResponse> createWallet(@PathVariable("userId") Long userId) {
         try {
             WalletResponse wallet = walletService.createWallet(userId);
             return ResponseEntity.ok(wallet);
@@ -131,7 +131,7 @@ public class WalletController {
     }
 
     @PostMapping("/{userId}/update-balance")
-    public ResponseEntity<MessageResponse> updateBalance(@PathVariable Long userId, @RequestParam BigDecimal amount) {
+    public ResponseEntity<MessageResponse> updateBalance(@PathVariable("userId") Long userId, @RequestParam("amount") BigDecimal amount) {
         try {
             walletService.updateBalance(userId, amount);
             return ResponseEntity.ok(new MessageResponse("Balance updated successfully"));
