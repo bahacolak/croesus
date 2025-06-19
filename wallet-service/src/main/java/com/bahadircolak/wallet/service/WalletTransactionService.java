@@ -9,7 +9,6 @@ import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -29,26 +28,26 @@ public class WalletTransactionService {
     }
 
     public List<WalletTransaction> getUserTransactions() {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
+        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = userClient.getUserIdByUsername(username);
         return transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
     }
 
     public List<WalletTransaction> getUserTransactionsByType(TransactionType type) {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
+        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = userClient.getUserIdByUsername(username);
         return transactionRepository.findByUserIdAndType(userId, type);
     }
 
     public List<WalletTransaction> getUserTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
+        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = userClient.getUserIdByUsername(username);
         return transactionRepository.findByUserIdAndTransactionDateBetween(userId, startDate, endDate);
     }
 
     public TransactionSummaryResponse getTransactionSummary() {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
+        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = userClient.getUserIdByUsername(username);
 
         TransactionSummaryResponse summary = new TransactionSummaryResponse();
 
