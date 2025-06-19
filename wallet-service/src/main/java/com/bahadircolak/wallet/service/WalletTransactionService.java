@@ -51,13 +51,11 @@ public class WalletTransactionService {
 
         TransactionSummaryResponse summary = new TransactionSummaryResponse();
 
-        // Calculate total amounts
         summary.setTotalDeposits(getTotalAmountByTypeAndStatus(userId, TransactionType.DEPOSIT, TransactionStatus.COMPLETED));
         summary.setTotalWithdrawals(getTotalAmountByTypeAndStatus(userId, TransactionType.WITHDRAWAL, TransactionStatus.COMPLETED));
         summary.setTotalTransfersIn(getTotalAmountByTypeAndStatus(userId, TransactionType.TRANSFER_IN, TransactionStatus.COMPLETED));
         summary.setTotalTransfersOut(getTotalAmountByTypeAndStatus(userId, TransactionType.TRANSFER_OUT, TransactionStatus.COMPLETED));
 
-        // Calculate transaction counts
         summary.setDepositCount(getTransactionCountByType(userId, TransactionType.DEPOSIT));
         summary.setWithdrawalCount(getTransactionCountByType(userId, TransactionType.WITHDRAWAL));
         summary.setTransferCount(
@@ -65,7 +63,6 @@ public class WalletTransactionService {
                 getTransactionCountByType(userId, TransactionType.TRANSFER_OUT)
         );
 
-        // Calculate net amount (in - out)
         BigDecimal totalIn = summary.getTotalDeposits().add(summary.getTotalTransfersIn());
         BigDecimal totalOut = summary.getTotalWithdrawals().add(summary.getTotalTransfersOut());
         summary.setNetAmount(totalIn.subtract(totalOut));
