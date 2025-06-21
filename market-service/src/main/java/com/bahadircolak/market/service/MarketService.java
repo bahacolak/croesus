@@ -69,7 +69,7 @@ public class MarketService {
 
     private AssetResponse convertToAssetResponse(CryptoCurrency crypto) {
         AssetResponse response = new AssetResponse();
-        response.setId(null); // CryptoCurrency uses symbol as ID
+        response.setId(Long.valueOf(Math.abs(crypto.getSymbol().hashCode())));
         response.setSymbol(crypto.getSymbol());
         response.setName(crypto.getName());
         response.setCoinId(crypto.getCoinId());

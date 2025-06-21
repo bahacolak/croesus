@@ -25,6 +25,9 @@ public class UserClient {
     @Value("${services.user-service.url:http://localhost:8081}")
     private String userServiceUrl;
 
+    @Value("${services.wallet-service.url:http://localhost:8083}")
+    private String walletServiceUrl;
+
     public Long getUserIdByUsername(String username) {
         try {
             String url = userServiceUrl + "/api/users/username/" + username + "/id";
@@ -66,7 +69,7 @@ public class UserClient {
 
     public BigDecimal getUserWalletBalance(Long userId) {
         try {
-            String url = userServiceUrl + "/api/users/" + userId + "/wallet/balance";
+            String url = walletServiceUrl + "/api/wallet/" + userId + "/balance";
             
             HttpHeaders headers = createAuthHeaders();
             RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.GET, URI.create(url));
@@ -81,7 +84,7 @@ public class UserClient {
 
     public void updateUserWalletBalance(Long userId, BigDecimal amount) {
         try {
-            String url = userServiceUrl + "/api/users/" + userId + "/wallet/update?amount=" + amount;
+            String url = walletServiceUrl + "/api/wallet/" + userId + "/update-balance?amount=" + amount;
             
             HttpHeaders headers = createAuthHeaders();
             RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.POST, URI.create(url));

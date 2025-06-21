@@ -55,6 +55,8 @@ services:
     url: ${PORTFOLIO_SERVICE_URL:http://portfolio-service:8082}
   market-service:
     url: ${MARKET_SERVICE_URL:http://market-service:8085}
+  wallet-service:
+    url: ${WALLET_SERVICE_URL:http://wallet-service:8083}
 
 management:
   endpoints:
