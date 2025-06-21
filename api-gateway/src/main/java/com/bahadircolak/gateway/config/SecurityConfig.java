@@ -26,13 +26,10 @@ public class SecurityConfig {
     public SecurityWebFilterChain filterChain(ServerHttpSecurity http) {
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(ServerHttpSecurity.CsrfSpec::disable) // CSRF'yi devre dışı bırak
+                .csrf(ServerHttpSecurity.CsrfSpec::disable) 
                 .authorizeExchange(exchanges -> exchanges
-                        // Actuator ve health endpoints'leri herkese açık
                         .pathMatchers("/actuator/**", "/health").permitAll()
-                        // Auth endpoints'leri herkese açık
                         .pathMatchers("/api/auth/**").permitAll()
-                        // Diğer tüm istekler için authentication gerekli değil (gateway sadece proxy)
                         .anyExchange().permitAll()
                 )
                 .build();
