@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.Map;
 
@@ -41,6 +42,35 @@ public class PortfolioService {
         } catch (Exception e) {
             log.debug("Portfolio not found for user: {} and asset: {}", userId, assetId);
             return null;
+        }
+    }
+
+    public void updatePortfolio(Long userId, Long assetId, BigDecimal quantity, BigDecimal price, String action, String assetSymbol, String assetName) {
+        try {
+            String url = portfolioServiceUrl + "/api/portfolio/user/" + userId + "/asset/" + assetId + "/update";
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Content-Type", "application/json");
+            String authHeader = (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
+            if (authHeader != null) {
+                headers.set("Authorization", "Bearer " + authHeader);
+            }
+
+            Map<String, Object> requestBody = Map.of(
+                "quantity", quantity.toString(),
+                "price", price.toString(),
+                "action", action,
+                "assetSymbol", assetSymbol,
+                "assetName", assetName
+            );
+
+            RequestEntity<Map<String, Object>> request = new RequestEntity<>(requestBody, headers, HttpMethod.POST, URI.create(url));
+            restTemplate.exchange(request, Map.class);
+            
+            log.info("Portfolio updated for user: {}, asset: {}, action: {}", userId, assetId, action);
+        } catch (Exception e) {
+            log.error("Error updating portfolio for user: {} and asset: {}", userId, assetId, e);
+            throw new RuntimeException("Failed to update portfolio: " + e.getMessage());
         }
     }
 } 

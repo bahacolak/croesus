@@ -966,6 +966,83 @@
               "path": ["api", "assets", "BTC"]
             }
           }
+        },
+        {
+          "name": "Update Portfolio (Manual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": \"0.001\",\n  \"price\": \"103886.00\",\n  \"action\": \"BUY\",\n  \"assetSymbol\": \"BTC\",\n  \"assetName\": \"Bitcoin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}:{{portfolio_service_port}}/api/portfolio/user/{{user_id}}/asset/1/update",
+              "host": ["{{base_url}}"],
+              "port": "{{portfolio_service_port}}",
+              "path": ["api", "portfolio", "user", "{{user_id}}", "asset", "1", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Portfolio updated successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.quantity).to.be.a('number');",
+                  "    pm.expect(response.currentValue).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Portfolio by User and Asset",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}:{{portfolio_service_port}}/api/portfolio/user/{{user_id}}/asset/1",
+              "host": ["{{base_url}}"],
+              "port": "{{portfolio_service_port}}",
+              "path": ["api", "portfolio", "user", "{{user_id}}", "asset", "1"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Portfolio entry retrieved', function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.quantity).to.be.a('number');",
+                  "        pm.expect(response.asset).to.be.an('object');",
+                  "    } else if (pm.response.code === 404) {",
+                  "        pm.expect(true).to.be.true; // Portfolio entry not found is valid",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -1284,6 +1361,353 @@
               }
             }
           ]
+        },
+        {
+          "name": "🚀 Complete Trading Flow Test",
+          "description": "Full end-to-end trading flow with portfolio integration",
+          "item": [
+            {
+              "name": "1. Login (Use Existing User)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}:{{gateway_port}}/api/auth/signin",
+                  "host": ["{{base_url}}"],
+                  "port": "{{gateway_port}}",
+                  "path": ["api", "auth", "signin"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const response = pm.response.json();",
+                      "    pm.collectionVariables.set('jwt_token', response.accessToken);",
+                      "    pm.collectionVariables.set('username', response.username);",
+                      "    pm.collectionVariables.set('user_id', response.id);",
+                      "    pm.test('Login successful', function () {",
+                      "        pm.expect(response.accessToken).to.not.be.undefined;",
+                      "    });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Check Initial Wallet Balance",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}:{{wallet_service_port}}/api/wallet/balance",
+                  "host": ["{{base_url}}"],
+                  "port": "{{wallet_service_port}}",
+                  "path": ["api", "wallet", "balance"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Wallet balance retrieved', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const balance = parseFloat(pm.response.text());",
+                      "    pm.expect(balance).to.be.a('number');",
+                      "    pm.collectionVariables.set('initial_balance', balance);",
+                      "    console.log('Initial wallet balance: $' + balance);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Get Market Data (BTC)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}:{{market_service_port}}/api/assets/BTC",
+                  "host": ["{{base_url}}"],
+                  "port": "{{market_service_port}}",
+                  "path": ["api", "assets", "BTC"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('BTC market data retrieved', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const btc = pm.response.json();",
+                      "    pm.expect(btc.currentPrice).to.be.a('number');",
+                      "    pm.collectionVariables.set('btc_price', btc.currentPrice);",
+                      "    console.log('BTC Price: $' + btc.currentPrice);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. Buy 0.001 BTC",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"BTC\",\n  \"quantity\": 0.001,\n  \"description\": \"Test buy with portfolio integration\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}:{{trading_service_port}}/api/trade/buy",
+                  "host": ["{{base_url}}"],
+                  "port": "{{trading_service_port}}",
+                  "path": ["api", "trade", "buy"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('BTC buy successful', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response.assetSymbol).to.eql('BTC');",
+                      "    pm.expect(response.quantity).to.eql(0.001);",
+                      "    pm.expect(response.transactionType).to.eql('BUY');",
+                      "    console.log('Purchased: ' + response.quantity + ' ' + response.assetSymbol);",
+                      "    console.log('Total cost: $' + response.totalAmount);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. Check Updated Wallet Balance",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}:{{wallet_service_port}}/api/wallet/balance",
+                  "host": ["{{base_url}}"],
+                  "port": "{{wallet_service_port}}",
+                  "path": ["api", "wallet", "balance"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Wallet balance updated after purchase', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const newBalance = parseFloat(pm.response.text());",
+                      "    const initialBalance = parseFloat(pm.collectionVariables.get('initial_balance'));",
+                      "    pm.expect(newBalance).to.be.below(initialBalance);",
+                      "    console.log('New balance: $' + newBalance + ' (decreased by $' + (initialBalance - newBalance).toFixed(2) + ')');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. Check Portfolio (Should Show BTC)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}:{{portfolio_service_port}}/api/portfolio",
+                  "host": ["{{base_url}}"],
+                  "port": "{{portfolio_service_port}}",
+                  "path": ["api", "portfolio"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Portfolio shows BTC position', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const portfolio = pm.response.json();",
+                      "    pm.expect(portfolio).to.be.an('array');",
+                      "    const btcPosition = portfolio.find(p => p.asset && p.asset.symbol === 'BTC');",
+                      "    pm.expect(btcPosition).to.not.be.undefined;",
+                      "    pm.expect(btcPosition.quantity).to.eql(0.001);",
+                      "    console.log('Portfolio BTC quantity: ' + btcPosition.quantity);",
+                      "    console.log('Portfolio BTC value: $' + btcPosition.currentValue);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. Sell 0.0005 BTC",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"BTC\",\n  \"quantity\": 0.0005,\n  \"description\": \"Test sell with portfolio integration\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}:{{trading_service_port}}/api/trade/sell",
+                  "host": ["{{base_url}}"],
+                  "port": "{{trading_service_port}}",
+                  "path": ["api", "trade", "sell"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('BTC sell successful', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response.assetSymbol).to.eql('BTC');",
+                      "    pm.expect(response.quantity).to.eql(0.0005);",
+                      "    pm.expect(response.transactionType).to.eql('SELL');",
+                      "    console.log('Sold: ' + response.quantity + ' ' + response.assetSymbol);",
+                      "    console.log('Sale amount: $' + response.totalAmount);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. Check Final Portfolio (Should Show 0.0005 BTC)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}:{{portfolio_service_port}}/api/portfolio",
+                  "host": ["{{base_url}}"],
+                  "port": "{{portfolio_service_port}}",
+                  "path": ["api", "portfolio"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Portfolio shows remaining BTC position', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const portfolio = pm.response.json();",
+                      "    const btcPosition = portfolio.find(p => p.asset && p.asset.symbol === 'BTC');",
+                      "    if (btcPosition) {",
+                      "        pm.expect(btcPosition.quantity).to.eql(0.0005);",
+                      "        console.log('Remaining BTC quantity: ' + btcPosition.quantity);",
+                      "        console.log('Remaining BTC value: $' + btcPosition.currentValue);",
+                      "    } else {",
+                      "        pm.expect.fail('BTC position should still exist with 0.0005 quantity');",
+                      "    }",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. Check Trading Transactions",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}:{{trading_service_port}}/api/transactions",
+                  "host": ["{{base_url}}"],
+                  "port": "{{trading_service_port}}",
+                  "path": ["api", "transactions"]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Trading transactions recorded', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const transactions = pm.response.json();",
+                      "    pm.expect(transactions).to.be.an('array');",
+                      "    pm.expect(transactions.length).to.be.at.least(2);",
+                      "    ",
+                      "    const buyTx = transactions.find(t => t.type === 'BUY');",
+                      "    const sellTx = transactions.find(t => t.type === 'SELL');",
+                      "    ",
+                      "    pm.expect(buyTx).to.not.be.undefined;",
+                      "    pm.expect(sellTx).to.not.be.undefined;",
+                      "    ",
+                      "    console.log('Total transactions: ' + transactions.length);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+                     ]
         }
       ]
     }

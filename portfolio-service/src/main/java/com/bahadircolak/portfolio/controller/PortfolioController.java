@@ -1,5 +1,6 @@
 package com.bahadircolak.portfolio.controller;
 
+import com.bahadircolak.portfolio.dto.request.UpdatePortfolioRequest;
 import com.bahadircolak.portfolio.model.Portfolio;
 import com.bahadircolak.portfolio.service.PortfolioService;
 import lombok.RequiredArgsConstructor;
@@ -38,5 +39,13 @@ public class PortfolioController {
             return ResponseEntity.ok(portfolio);
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/user/{userId}/asset/{assetId}/update")
+    public ResponseEntity<Portfolio> updatePortfolio(@PathVariable("userId") Long userId, 
+                                                   @PathVariable("assetId") Long assetId,
+                                                   @RequestBody UpdatePortfolioRequest request) {
+        Portfolio portfolio = portfolioService.updatePortfolio(userId, assetId, request);
+        return ResponseEntity.ok(portfolio);
     }
 } 

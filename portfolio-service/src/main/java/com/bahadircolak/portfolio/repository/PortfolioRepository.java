@@ -15,7 +15,8 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, Long> {
     
     List<Portfolio> findByUserId(Long userId);
     
-    Optional<Portfolio> findByUserIdAndAssetId(Long userId, Long assetId);
+    @Query("SELECT p FROM Portfolio p WHERE p.userId = :userId AND p.asset.id = :assetId")
+    Optional<Portfolio> findByUserIdAndAssetId(@Param("userId") Long userId, @Param("assetId") Long assetId);
     
     @Query("SELECT SUM(p.currentValue) FROM Portfolio p WHERE p.userId = :userId")
     BigDecimal getTotalValueByUserId(@Param("userId") Long userId);

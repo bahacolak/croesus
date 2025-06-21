@@ -54,6 +54,7 @@ public class TradingService {
             BigDecimal totalCost = currentPrice.multiply(request.getQuantity());
 
             BigDecimal walletBalance = userClient.getUserWalletBalance(userId);
+            
             if (walletBalance.compareTo(totalCost) < 0) {
                 return ResponseEntity.badRequest()
                         .body(new MessageResponse("Insufficient balance. Required: " + totalCost + ", Current: " + walletBalance));
@@ -62,6 +63,9 @@ public class TradingService {
             userClient.updateUserWalletBalance(userId, totalCost.negate());
 
             Map<String, Object> existingPortfolio = portfolioService.getPortfolioByUserAndAsset(userId, assetId);
+
+            portfolioService.updatePortfolio(userId, assetId, request.getQuantity(), currentPrice, "BUY", 
+                asset.get("symbol").toString(), asset.get("name") != null ? asset.get("name").toString() : asset.get("symbol").toString());
 
             Transaction transaction = new Transaction();
             transaction.setUserId(userId);
@@ -100,11 +104,17 @@ public class TradingService {
             Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
 
             Map<String, Object> asset = marketService.getAssetBySymbol(request.getSymbol());
+            
+            if (asset == null || asset.get("id") == null || asset.get("currentPrice") == null || asset.get("symbol") == null) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponse("Asset data not found or incomplete for symbol: " + request.getSymbol()));
+            }
+            
             Long assetId = Long.valueOf(asset.get("id").toString());
             BigDecimal currentPrice = new BigDecimal(asset.get("currentPrice").toString());
 
             Map<String, Object> portfolio = portfolioService.getPortfolioByUserAndAsset(userId, assetId);
-            if (portfolio == null) {
+            if (portfolio == null || portfolio.get("quantity") == null) {
                 return ResponseEntity.badRequest()
                         .body(new MessageResponse("Asset " + asset.get("symbol") + " not found in portfolio"));
             }
@@ -119,6 +129,9 @@ public class TradingService {
             BigDecimal saleAmount = currentPrice.multiply(request.getQuantity());
 
             userClient.updateUserWalletBalance(userId, saleAmount);
+
+            portfolioService.updatePortfolio(userId, assetId, request.getQuantity(), currentPrice, "SELL", 
+                asset.get("symbol").toString(), asset.get("name") != null ? asset.get("name").toString() : asset.get("symbol").toString());
 
             Transaction transaction = new Transaction();
             transaction.setUserId(userId);
