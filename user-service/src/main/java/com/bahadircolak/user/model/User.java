@@ -29,8 +29,11 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
     
-    @Column(name = "full_name")
-    private String fullName;
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+    
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
     
     @Column(name = "wallet_balance")
     private BigDecimal walletBalance = BigDecimal.ZERO;

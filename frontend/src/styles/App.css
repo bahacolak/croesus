@@ -1,3 +1,5 @@
+@import './Loading.css';
+
 /* App Container */
 .app {
   min-height: 100vh;

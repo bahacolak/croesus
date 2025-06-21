@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "Croesus Microservices API Collection - Updated",
-    "description": "Complete API collection for Croesus cryptocurrency trading platform microservices with improved JWT authentication and gateway routing",
-    "version": "2.0.0",
+    "description": "Complete API collection for Croesus cryptocurrency trading platform microservices with improved JWT authentication, gateway routing, and enhanced user registration with firstName/lastName fields",
+    "version": "2.1.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -88,7 +88,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Test User\",\n  \"roles\": [\"user\"]\n}"
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"password\": \"password123\",\n  \"roles\": [\"user\"]\n}"
             },
             "url": {
               "raw": "{{base_url}}:{{gateway_port}}/api/auth/signup",
@@ -149,18 +149,21 @@
                   "",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('jwt_token', response.accessToken);",
+                  "    pm.collectionVariables.set('jwt_token', response.token);",
                   "    pm.collectionVariables.set('username', response.username);",
                   "    pm.collectionVariables.set('user_id', response.id);",
                   "    ",
                   "    pm.test('Login successful and JWT saved', function () {",
-                  "        pm.expect(response.accessToken).to.not.be.undefined;",
-                  "        pm.expect(response.accessToken).to.have.length.above(10);",
+                  "        pm.expect(response.token).to.not.be.undefined;",
+                  "        pm.expect(response.token).to.have.length.above(10);",
                   "    });",
                   "    ",
                   "    pm.test('User details received', function () {",
                   "        pm.expect(response.username).to.not.be.undefined;",
                   "        pm.expect(response.id).to.not.be.undefined;",
+                  "        pm.expect(response.firstName).to.not.be.undefined;",
+                  "        pm.expect(response.lastName).to.not.be.undefined;",
+                  "        pm.expect(response.email).to.not.be.undefined;",
                   "    });",
                   "}"
                 ]
@@ -196,9 +199,22 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('jwt_token', response.accessToken);",
+                  "    pm.collectionVariables.set('jwt_token', response.token);",
                   "    pm.collectionVariables.set('username', response.username);",
                   "    pm.collectionVariables.set('user_id', response.id);",
+                  "    ",
+                  "    pm.test('Login successful and JWT saved', function () {",
+                  "        pm.expect(response.token).to.not.be.undefined;",
+                  "        pm.expect(response.token).to.have.length.above(10);",
+                  "    });",
+                  "    ",
+                  "    pm.test('User details received', function () {",
+                  "        pm.expect(response.username).to.not.be.undefined;",
+                  "        pm.expect(response.id).to.not.be.undefined;",
+                  "        pm.expect(response.firstName).to.not.be.undefined;",
+                  "        pm.expect(response.lastName).to.not.be.undefined;",
+                  "        pm.expect(response.email).to.not.be.undefined;",
+                  "    });",
                   "}"
                 ]
               }

@@ -133,4 +133,131 @@
   .navbar-toggle.active span:nth-child(3) {
     transform: translateY(-9px) rotate(-45deg);
   }
+}
+
+/* Auth section styles */
+.navbar-auth {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.login-btn, .register-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.login-btn {
+  color: var(--text-color);
+  border: 1px solid #ddd;
+}
+
+.login-btn:hover {
+  background: var(--primary-color, #667eea);
+  color: white;
+  border-color: var(--primary-color, #667eea);
+}
+
+.register-btn {
+  background: var(--primary-color, #667eea);
+  color: white;
+  border: 1px solid var(--primary-color, #667eea);
+}
+
+.register-btn:hover {
+  background: #5a6fd8;
+  border-color: #5a6fd8;
+}
+
+.auth-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-welcome {
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.logout-btn:hover {
+  background: #c82333;
+}
+
+.profile-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f8f9fa;
+  color: #495057;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: 1px solid #dee2e6;
+}
+
+.profile-link:hover {
+  background: #e9ecef;
+  color: #333;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .navbar-auth {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem;
+    display: none;
+    z-index: 999;
+  }
+  
+  .navbar-auth.active {
+    display: flex;
+  }
+  
+  .auth-buttons {
+    flex-direction: column;
+    width: 150px;
+    gap: 0.5rem;
+  }
+  
+  .auth-user {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 200px;
+  }
+  
+  .user-welcome {
+    margin-bottom: 0.5rem;
+  }
 } 

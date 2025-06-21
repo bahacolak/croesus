@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsMenuOpen(false);
   };
 
   return (
@@ -75,6 +82,28 @@ const Navbar = () => {
               </NavLink>
             </li>
           </ul>
+
+          <div className={`navbar-auth ${isMenuOpen ? 'active' : ''}`}>
+            {isAuthenticated ? (
+              <div className="auth-user">
+                <Link to="/profile" className="profile-link">
+                  👤 {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.username}
+                </Link>
+                <button className="logout-btn" onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div className="auth-buttons">
+                <Link to="/login" className="login-btn">
+                  Login
+                </Link>
+                <Link to="/register" className="register-btn">
+                  Register
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </nav>
