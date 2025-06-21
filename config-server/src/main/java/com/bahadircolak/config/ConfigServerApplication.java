@@ -4,15 +4,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.config.server.EnableConfigServer;
 
-/**
- * Config Server - Central Configuration Management
- * Manages configuration for all microservices
- * 
- * Port: 8888
- * Config Repository: classpath:/config-repo
- * 
- * Note: @EnableEurekaClient is no longer required, it's automatically active
- */
 @SpringBootApplication
 @EnableConfigServer
 public class ConfigServerApplication {
