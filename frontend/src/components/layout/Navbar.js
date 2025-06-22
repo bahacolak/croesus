@@ -49,30 +49,34 @@ const Navbar = () => {
                 Home
               </NavLink>
             </li>
-            <li className="navbar-item">
-              <NavLink 
-                to="/crypto" 
-                className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}
-              >
-                Crypto
-              </NavLink>
-            </li>
-            <li className="navbar-item">
-              <NavLink 
-                to="/trading" 
-                className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}
-              >
-                Trading
-              </NavLink>
-            </li>
-            <li className="navbar-item">
-              <NavLink 
-                to="/portfolio" 
-                className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}
-              >
-                Portfolio
-              </NavLink>
-            </li>
+            {isAuthenticated && (
+              <>
+                <li className="navbar-item">
+                  <NavLink 
+                    to="/crypto" 
+                    className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}
+                  >
+                    Crypto
+                  </NavLink>
+                </li>
+                <li className="navbar-item">
+                  <NavLink 
+                    to="/trading" 
+                    className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}
+                  >
+                    Trading
+                  </NavLink>
+                </li>
+                <li className="navbar-item">
+                  <NavLink 
+                    to="/portfolio" 
+                    className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}
+                  >
+                    Portfolio
+                  </NavLink>
+                </li>
+              </>
+            )}
             <li className="navbar-item">
               <NavLink 
                 to="/about" 
