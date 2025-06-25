@@ -29,12 +29,7 @@ public class PortfolioService {
         try {
             String url = portfolioServiceUrl + "/api/portfolio/user/" + userId + "/asset/" + assetId;
             
-            HttpHeaders headers = new HttpHeaders();
-            String authHeader = (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
-            if (authHeader != null) {
-                headers.set("Authorization", "Bearer " + authHeader);
-            }
-
+            HttpHeaders headers = createAuthHeaders();
             RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.GET, URI.create(url));
             ResponseEntity<Map> response = restTemplate.exchange(request, Map.class);
             
@@ -49,16 +44,16 @@ public class PortfolioService {
         try {
             String url = portfolioServiceUrl + "/api/portfolio/user/" + userId + "/asset/" + assetId + "/update";
             
-            HttpHeaders headers = new HttpHeaders();
+            HttpHeaders headers = createAuthHeaders();
             headers.set("Content-Type", "application/json");
-            String authHeader = (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
-            if (authHeader != null) {
-                headers.set("Authorization", "Bearer " + authHeader);
-            }
+
+            // Debug logging
+            log.info("Sending request to: {}", url);
+            log.info("Authorization header: {}", headers.get("Authorization"));
 
             Map<String, Object> requestBody = Map.of(
-                "quantity", quantity.toString(),
-                "price", price.toString(),
+                "quantity", quantity,
+                "price", price,
                 "action", action,
                 "assetSymbol", assetSymbol,
                 "assetName", assetName
@@ -72,5 +67,14 @@ public class PortfolioService {
             log.error("Error updating portfolio for user: {} and asset: {}", userId, assetId, e);
             throw new RuntimeException("Failed to update portfolio: " + e.getMessage());
         }
+    }
+
+    private HttpHeaders createAuthHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        Object credentials = SecurityContextHolder.getContext().getAuthentication().getCredentials();
+        if (credentials != null) {
+            headers.set("Authorization", "Bearer " + credentials.toString());
+        }
+        return headers;
     }
 } 

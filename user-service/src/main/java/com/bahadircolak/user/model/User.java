@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,9 +33,6 @@ public class User {
     
     @Column(name = "last_name", nullable = false)
     private String lastName;
-    
-    @Column(name = "wallet_balance")
-    private BigDecimal walletBalance = BigDecimal.ZERO;
     
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

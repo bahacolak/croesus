@@ -58,15 +58,22 @@ public class PortfolioService {
     public Portfolio updatePortfolio(Long userId, Long assetId, UpdatePortfolioRequest request) {
         Asset asset = assetService.getAssetById(assetId).orElse(null);
         if (asset == null) {
-            asset = new Asset();
-            asset.setSymbol(request.getAssetSymbol());
-            asset.setName(request.getAssetName());
-            asset.setType(Asset.AssetType.CRYPTO);
-            asset.setCurrentPrice(request.getPrice());
-            asset.setPriceChange24h(BigDecimal.ZERO);
-            asset.setPriceChangePercent24h(BigDecimal.ZERO);
-            asset = assetService.saveAsset(asset);
-            log.info("Created new asset: {}", asset.getSymbol());
+            asset = assetService.getAssetBySymbol(request.getAssetSymbol()).orElse(null);
+            if (asset == null) {
+                asset = new Asset();
+                asset.setSymbol(request.getAssetSymbol());
+                asset.setName(request.getAssetName());
+                asset.setType(Asset.AssetType.CRYPTO);
+                asset.setCurrentPrice(request.getPrice());
+                asset.setPriceChange24h(BigDecimal.ZERO);
+                asset.setPriceChangePercent24h(BigDecimal.ZERO);
+                asset = assetService.saveAsset(asset);
+                log.info("Created new asset: {}", asset.getSymbol());
+            } else {
+                asset.setCurrentPrice(request.getPrice());
+                asset = assetService.saveAsset(asset);
+                log.info("Updated existing asset: {}", asset.getSymbol());
+            }
         } else {
             asset.setCurrentPrice(request.getPrice());
             asset = assetService.saveAsset(asset);

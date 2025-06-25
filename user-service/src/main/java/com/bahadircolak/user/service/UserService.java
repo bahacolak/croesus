@@ -7,7 +7,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,19 +44,5 @@ public class UserService {
 
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
-    }
-
-    public User updateWalletBalance(Long userId, BigDecimal amount) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        user.setWalletBalance(user.getWalletBalance().add(amount));
-        return userRepository.save(user);
-    }
-
-    public BigDecimal getWalletBalance(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        return user.getWalletBalance();
     }
 } 

@@ -7,8 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -27,31 +27,31 @@ public class UserController {
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
     public ResponseEntity<User> getUserById(@PathVariable("id") Long id) {
-        return userService.getUserById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/current")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public ResponseEntity<User> getCurrentUser() {
-        return ResponseEntity.ok(userService.getCurrentUser());
+        Optional<User> user = userService.getUserById(id);
+        return user.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/username/{username}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or #username == authentication.name")
     public ResponseEntity<User> getUserByUsername(@PathVariable("username") String username) {
-        return userService.getUserByUsername(username)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Optional<User> user = userService.getUserByUsername(username);
+        return user.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/username/{username}/id")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<Long> getUserIdByUsername(@PathVariable("username") String username) {
-        return userService.getUserByUsername(username)
-                .map(user -> ResponseEntity.ok(user.getId()))
-                .orElse(ResponseEntity.notFound().build());
+        Optional<User> user = userService.getUserByUsername(username);
+        return user.map(u -> ResponseEntity.ok(u.getId())).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/current")
+    public ResponseEntity<User> getCurrentUser() {
+        try {
+            User currentUser = userService.getCurrentUser();
+            return ResponseEntity.ok(currentUser);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PutMapping("/{id}")
@@ -72,17 +72,5 @@ public class UserController {
         }
         userService.deleteUser(id);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/{id}/wallet/balance")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public ResponseEntity<BigDecimal> getWalletBalance(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(userService.getWalletBalance(id));
-    }
-
-    @PostMapping("/{id}/wallet/update")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public ResponseEntity<User> updateWalletBalance(@PathVariable("id") Long id, @RequestParam("amount") BigDecimal amount) {
-        return ResponseEntity.ok(userService.updateWalletBalance(id, amount));
     }
 } 
