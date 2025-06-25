@@ -43,9 +43,14 @@ export const AuthProvider = ({ children }) => {
         password
       });
 
-      const { accessToken, ...userData } = response.data;
+      console.log('Login response:', response.data);
       
-      localStorage.setItem('token', accessToken);
+      const { token, ...userData } = response.data;
+      
+      console.log('Access token:', token);
+      console.log('Access token length:', token?.length);
+      
+      localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
