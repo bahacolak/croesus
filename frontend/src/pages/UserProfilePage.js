@@ -21,20 +21,45 @@ const UserProfilePage = () => {
   const fetchUserStats = async () => {
     try {
       setLoading(true);
+      setError('');
       
-      const walletResponse = await api.get('/wallet-service/api/wallet');
-      const portfolioResponse = await api.get('/portfolio-service/api/portfolio');
+      console.log('Fetching user stats...');
       
-      setUserStats({
+      // Check token
+      const token = localStorage.getItem('token');
+      console.log('Token exists:', !!token);
+      console.log('Token length:', token?.length);
+      
+      // Fetch wallet data
+      console.log('Calling wallet service...');
+      const walletResponse = await api.get('/api/wallet');
+      console.log('Wallet response:', walletResponse.data);
+      
+      // Fetch portfolio data
+      console.log('Calling portfolio service...');
+      const portfolioResponse = await api.get('/api/portfolio');
+      console.log('Portfolio response:', portfolioResponse.data);
+      
+      // Fetch transactions data
+      console.log('Calling trading service...');
+      const transactionsResponse = await api.get('/api/transactions');
+      console.log('Transactions response:', transactionsResponse.data);
+      
+      const stats = {
         totalBalance: walletResponse.data?.balance || 0,
-        totalAssets: portfolioResponse.data?.assets?.length || 0,
-        totalTrades: 0,
-        joinDate: user?.createdAt
-      });
+        totalAssets: portfolioResponse.data?.length || 0,
+        totalTrades: transactionsResponse.data?.length || 0,
+        joinDate: 'Member since registration'
+      };
+      
+      console.log('Final stats:', stats);
+      setUserStats(stats);
       
     } catch (error) {
       console.error('Error fetching user stats:', error);
-      setError('Error fetching user stats.');
+      console.error('Error details:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      setError(`Error fetching user stats: ${error.response?.status || 'Network error'}`);
     } finally {
       setLoading(false);
     }
