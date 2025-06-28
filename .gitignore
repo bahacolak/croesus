@@ -55,3 +55,21 @@ frontend/.env
 frontend/.env.local
 frontend/.env.production
 frontend/.env.development
+frontend/.cache/
+frontend/dist/
+frontend/coverage/
+frontend/*.log
+frontend/npm-debug.log*
+frontend/.npm
+frontend/.eslintcache
+frontend/.parcel-cache
+frontend/tmp/
+frontend/temp/
+
+# Additional large files and caches
+**/node_modules/
+**/.cache/
+**/build/
+**/dist/
+**/*.log
+**/.DS_Store
