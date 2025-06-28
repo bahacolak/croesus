@@ -84,6 +84,25 @@ public class PortfolioService {
         }
     }
 
+    public Long getAssetIdBySymbol(String symbol) {
+        try {
+            String url = portfolioServiceUrl + "/api/portfolio/asset/symbol/" + symbol;
+            
+            HttpHeaders headers = createAuthHeaders();
+            RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.GET, URI.create(url));
+            ResponseEntity<Map> response = restTemplate.exchange(request, Map.class);
+            
+            Map<String, Object> result = response.getBody();
+            if (result != null && result.get("id") != null) {
+                return Long.valueOf(result.get("id").toString());
+            }
+            return null;
+        } catch (Exception e) {
+            log.debug("Asset not found by symbol: {}", symbol);
+            return null;
+        }
+    }
+
     private HttpHeaders createAuthHeaders() {
         HttpHeaders headers = new HttpHeaders();
         Object credentials = SecurityContextHolder.getContext().getAuthentication().getCredentials();

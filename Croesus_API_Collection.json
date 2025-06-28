@@ -1096,6 +1096,42 @@
               }
             }
           ]
+        },
+        {
+          "name": "Get Asset ID by Symbol",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}:{{portfolio_service_port}}/api/portfolio/asset/symbol/BTC",
+              "host": ["{{base_url}}"],
+              "port": "{{portfolio_service_port}}",
+              "path": ["api", "portfolio", "asset", "symbol", "BTC"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Asset ID retrieved by symbol', function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.id).to.be.a('number');",
+                  "        console.log('Asset ID for BTC:', response.id);",
+                  "    } else if (pm.response.code === 404) {",
+                  "        console.log('Asset not found for symbol BTC');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

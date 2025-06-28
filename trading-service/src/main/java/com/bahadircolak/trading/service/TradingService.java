@@ -153,12 +153,20 @@ public class TradingService implements ITradingService {
     }
     
     private Long getOrCreatePortfolioAssetId(Long userId, AssetInfo asset) {
+        // Önce symbol ile portfolio'da asset arayalım
         Map<String, Object> portfolio = portfolioService.getPortfolioByUserAndSymbol(userId, asset.getSymbol());
         if (portfolio != null && portfolio.get("asset") != null) {
             Map<String, Object> portfolioAsset = (Map<String, Object>) portfolio.get("asset");
             return Long.valueOf(portfolioAsset.get("id").toString());
         }
         
+        // Portfolio'da asset yoksa, portfolio service'te doğru asset ID'sini bul
+        Long portfolioAssetId = portfolioService.getAssetIdBySymbol(asset.getSymbol());
+        if (portfolioAssetId != null) {
+            return portfolioAssetId;
+        }
+        
+        // Son çare olarak market service ID'sini kullan
         return asset.getId();
     }
     
