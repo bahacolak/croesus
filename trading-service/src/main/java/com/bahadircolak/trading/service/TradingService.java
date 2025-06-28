@@ -1,8 +1,15 @@
 package com.bahadircolak.trading.service;
 
+import com.bahadircolak.trading.constants.ErrorMessages;
+import com.bahadircolak.trading.constants.TradingConstants;
+import com.bahadircolak.trading.dto.AssetInfo;
 import com.bahadircolak.trading.dto.request.TradeRequest;
 import com.bahadircolak.trading.dto.response.MessageResponse;
 import com.bahadircolak.trading.dto.response.TradeResponse;
+import com.bahadircolak.trading.exception.AssetNotFoundException;
+import com.bahadircolak.trading.exception.InsufficientAssetException;
+import com.bahadircolak.trading.exception.InsufficientBalanceException;
+import com.bahadircolak.trading.exception.TradingException;
 import com.bahadircolak.trading.model.Transaction;
 import com.bahadircolak.trading.model.Transaction.TransactionType;
 import com.bahadircolak.trading.repository.TransactionRepository;
@@ -31,135 +38,156 @@ public class TradingService {
     private final TransactionRepository transactionRepository;
 
     @Transactional
-    public ResponseEntity<?> buyAsset(TradeRequest request) {
-        try {
-            UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
-
-            Map<String, Object> asset = marketService.getAssetBySymbol(request.getSymbol());
-            
-            if (asset == null) {
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Asset not found: " + request.getSymbol()));
-            }
-            
-            if (asset.get("id") == null || asset.get("currentPrice") == null || asset.get("symbol") == null) {
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Incomplete asset data for symbol: " + request.getSymbol()));
-            }
-            
-            Long assetId = Long.valueOf(asset.get("id").toString());
-            BigDecimal currentPrice = new BigDecimal(asset.get("currentPrice").toString());
-
-            BigDecimal totalCost = currentPrice.multiply(request.getQuantity());
-
-            BigDecimal walletBalance = userClient.getUserWalletBalance(userId);
-            
-            if (walletBalance.compareTo(totalCost) < 0) {
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Insufficient balance. Required: " + totalCost + ", Current: " + walletBalance));
-            }
-
-            userClient.updateUserWalletBalance(userId, totalCost.negate());
-
-            Map<String, Object> existingPortfolio = portfolioService.getPortfolioByUserAndAsset(userId, assetId);
-
-            portfolioService.updatePortfolio(userId, assetId, request.getQuantity(), currentPrice, "BUY", 
-                asset.get("symbol").toString(), asset.get("name") != null ? asset.get("name").toString() : asset.get("symbol").toString());
-
-            Transaction transaction = new Transaction();
-            transaction.setUserId(userId);
-            transaction.setAssetId(assetId);
-            transaction.setType(TransactionType.BUY);
-            transaction.setAmount(totalCost);
-            transaction.setQuantity(request.getQuantity());
-            transaction.setUnitPrice(currentPrice);
-            transaction.setTransactionDate(LocalDateTime.now());
-            transaction.setDescription(request.getDescription() != null ?
-                    request.getDescription() : asset.get("symbol") + " purchase");
-            
-            Transaction savedTransaction = transactionRepository.save(transaction);
-
-            return ResponseEntity.ok(new TradeResponse(
-                    request.getQuantity() + " " + asset.get("symbol") + " successfully purchased.",
-                    asset.get("symbol").toString(),
-                    request.getQuantity(),
-                    currentPrice,
-                    totalCost,
-                    "BUY",
-                    savedTransaction.getTransactionDate()
-            ));
-
-        } catch (Exception e) {
-            log.error("Error during buy operation: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Error during buy operation: " + e.getMessage()));
-        }
+    public ResponseEntity<TradeResponse> buyAsset(TradeRequest request) {
+        Long userId = getCurrentUserId();
+        AssetInfo asset = validateAndGetAsset(request.getSymbol());
+        BigDecimal totalCost = calculateTotalCost(asset.getCurrentPrice(), request.getQuantity());
+        
+        validateSufficientBalance(userId, totalCost);
+        
+        return executeBuyTransaction(userId, asset, request, totalCost);
     }
 
     @Transactional
-    public ResponseEntity<?> sellAsset(TradeRequest request) {
-        try {
-            UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            Long userId = userClient.getUserIdByUsername(userDetails.getUsername());
+    public ResponseEntity<TradeResponse> sellAsset(TradeRequest request) {
+        Long userId = getCurrentUserId();
+        AssetInfo asset = validateAndGetAsset(request.getSymbol());
+        validateSufficientAssetInPortfolio(userId, asset, request.getQuantity());
+        BigDecimal saleAmount = calculateTotalCost(asset.getCurrentPrice(), request.getQuantity());
+        return executeSellTransaction(userId, asset, request, saleAmount);
+    }
 
-            Map<String, Object> asset = marketService.getAssetBySymbol(request.getSymbol());
-            
-            if (asset == null || asset.get("id") == null || asset.get("currentPrice") == null || asset.get("symbol") == null) {
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Asset data not found or incomplete for symbol: " + request.getSymbol()));
-            }
-            
-            Long assetId = Long.valueOf(asset.get("id").toString());
-            BigDecimal currentPrice = new BigDecimal(asset.get("currentPrice").toString());
-
-            Map<String, Object> portfolio = portfolioService.getPortfolioByUserAndAsset(userId, assetId);
-            if (portfolio == null || portfolio.get("quantity") == null) {
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Asset " + asset.get("symbol") + " not found in portfolio"));
-            }
-
-            BigDecimal currentQuantity = new BigDecimal(portfolio.get("quantity").toString());
-            if (currentQuantity.compareTo(request.getQuantity()) < 0) {
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Insufficient asset. Current: " + currentQuantity + 
-                                ", Requested to sell: " + request.getQuantity()));
-            }
-
-            BigDecimal saleAmount = currentPrice.multiply(request.getQuantity());
-
-            userClient.updateUserWalletBalance(userId, saleAmount);
-
-            portfolioService.updatePortfolio(userId, assetId, request.getQuantity(), currentPrice, "SELL", 
-                asset.get("symbol").toString(), asset.get("name") != null ? asset.get("name").toString() : asset.get("symbol").toString());
-
-            Transaction transaction = new Transaction();
-            transaction.setUserId(userId);
-            transaction.setAssetId(assetId);
-            transaction.setType(TransactionType.SELL);
-            transaction.setAmount(saleAmount);
-            transaction.setQuantity(request.getQuantity());
-            transaction.setUnitPrice(currentPrice);
-            transaction.setTransactionDate(LocalDateTime.now());
-            transaction.setDescription(request.getDescription() != null ?
-                    request.getDescription() : asset.get("symbol") + " sale");
-            
-            Transaction savedTransaction = transactionRepository.save(transaction);
-
-            return ResponseEntity.ok(new TradeResponse(
-                    request.getQuantity() + " " + asset.get("symbol") + " successfully sold.",
-                    asset.get("symbol").toString(),
-                    request.getQuantity(),
-                    currentPrice,
-                    saleAmount,
-                    "SELL",
-                    savedTransaction.getTransactionDate()
-            ));
-
-        } catch (Exception e) {
-            log.error("Error during sell operation: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Error during sell operation: " + e.getMessage()));
+    private Long getCurrentUserId() {
+        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return userClient.getUserIdByUsername(userDetails.getUsername());
+    }
+    
+    private AssetInfo validateAndGetAsset(String symbol) {
+        Map<String, Object> assetData = marketService.getAssetBySymbol(symbol);
+        
+        if (assetData == null) {
+            throw new AssetNotFoundException(symbol);
         }
+        
+        if (assetData.get("id") == null || assetData.get("currentPrice") == null || assetData.get("symbol") == null) {
+            throw new TradingException(String.format(ErrorMessages.ASSET_DATA_INCOMPLETE, symbol), "INCOMPLETE_ASSET_DATA");
+        }
+        
+        return new AssetInfo(
+                Long.valueOf(assetData.get("id").toString()),
+                assetData.get("symbol").toString(),
+                assetData.get("name") != null ? assetData.get("name").toString() : null,
+                new BigDecimal(assetData.get("currentPrice").toString())
+        );
+    }
+    
+    private BigDecimal calculateTotalCost(BigDecimal unitPrice, BigDecimal quantity) {
+        return unitPrice.multiply(quantity);
+    }
+    
+    private void validateSufficientBalance(Long userId, BigDecimal totalCost) {
+        BigDecimal walletBalance = userClient.getUserWalletBalance(userId);
+        
+        if (walletBalance.compareTo(totalCost) < 0) {
+            throw new InsufficientBalanceException(totalCost, walletBalance);
+        }
+    }
+    
+    private void validateSufficientAssetInPortfolio(Long userId, AssetInfo asset, BigDecimal requestedQuantity) {
+        Map<String, Object> portfolio = portfolioService.getPortfolioByUserAndAsset(userId, asset.getId());
+        
+        if (portfolio == null) {
+            log.debug("Portfolio not found with market ID: {}, trying to find by symbol: {}", asset.getId(), asset.getSymbol());
+            portfolio = portfolioService.getPortfolioByUserAndSymbol(userId, asset.getSymbol());
+        }
+        
+        if (portfolio == null || portfolio.get("quantity") == null) {
+            throw new TradingException(String.format(ErrorMessages.ASSET_NOT_IN_PORTFOLIO, asset.getSymbol()), "ASSET_NOT_IN_PORTFOLIO");
+        }
+        
+        BigDecimal currentQuantity = new BigDecimal(portfolio.get("quantity").toString());
+        if (currentQuantity.compareTo(requestedQuantity) < 0) {
+            throw new InsufficientAssetException(asset.getSymbol(), currentQuantity, requestedQuantity);
+        }
+    }
+    
+    private ResponseEntity<TradeResponse> executeBuyTransaction(Long userId, AssetInfo asset, TradeRequest request, BigDecimal totalCost) {
+        userClient.updateUserWalletBalance(userId, totalCost.negate());
+        
+        Long portfolioAssetId = getOrCreatePortfolioAssetId(userId, asset);
+        portfolioService.updatePortfolio(userId, portfolioAssetId, request.getQuantity(), asset.getCurrentPrice(), 
+                TradingConstants.BUY_OPERATION, asset.getSymbol(), asset.getDisplayName());
+        
+        Transaction transaction = createTransaction(userId, asset, request, TransactionType.BUY, totalCost, TradingConstants.BUY_OPERATION);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+        
+        return ResponseEntity.ok(createTradeResponse(
+                request.getQuantity() + " " + asset.getSymbol() + " successfully purchased.",
+                asset.getSymbol(),
+                request.getQuantity(),
+                asset.getCurrentPrice(),
+                totalCost,
+                TradingConstants.BUY_OPERATION,
+                savedTransaction.getTransactionDate()
+        ));
+    }
+    
+    private ResponseEntity<TradeResponse> executeSellTransaction(Long userId, AssetInfo asset, TradeRequest request, BigDecimal saleAmount) {
+        userClient.updateUserWalletBalance(userId, saleAmount);
+        
+        Long portfolioAssetId = getOrCreatePortfolioAssetId(userId, asset);
+        portfolioService.updatePortfolio(userId, portfolioAssetId, request.getQuantity(), asset.getCurrentPrice(), 
+                TradingConstants.SELL_OPERATION, asset.getSymbol(), asset.getDisplayName());
+        
+        Transaction transaction = createTransaction(userId, asset, request, TransactionType.SELL, saleAmount, TradingConstants.SELL_OPERATION);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+        
+        return ResponseEntity.ok(createTradeResponse(
+                request.getQuantity() + " " + asset.getSymbol() + " successfully sold.",
+                asset.getSymbol(),
+                request.getQuantity(),
+                asset.getCurrentPrice(),
+                saleAmount,
+                TradingConstants.SELL_OPERATION,
+                savedTransaction.getTransactionDate()
+        ));
+    }
+    
+    private Long getOrCreatePortfolioAssetId(Long userId, AssetInfo asset) {
+        Map<String, Object> portfolio = portfolioService.getPortfolioByUserAndSymbol(userId, asset.getSymbol());
+        if (portfolio != null && portfolio.get("asset") != null) {
+            Map<String, Object> portfolioAsset = (Map<String, Object>) portfolio.get("asset");
+            return Long.valueOf(portfolioAsset.get("id").toString());
+        }
+        
+        return asset.getId();
+    }
+    
+    private Transaction createTransaction(Long userId, AssetInfo asset, TradeRequest request, TransactionType type, BigDecimal amount, String operation) {
+        Transaction transaction = new Transaction();
+        transaction.setUserId(userId);
+        transaction.setAssetId(asset.getId());
+        transaction.setType(type);
+        transaction.setAmount(amount);
+        transaction.setQuantity(request.getQuantity());
+        transaction.setUnitPrice(asset.getCurrentPrice());
+        transaction.setTransactionDate(LocalDateTime.now());
+        
+        String description = request.getDescription();
+        if (description == null) {
+            description = String.format(
+                    TradingConstants.BUY_OPERATION.equals(operation) ? 
+                            TradingConstants.DEFAULT_BUY_DESCRIPTION : TradingConstants.DEFAULT_SELL_DESCRIPTION,
+                    asset.getSymbol()
+            );
+        }
+        transaction.setDescription(description);
+        
+        return transaction;
+    }
+    
+    private TradeResponse createTradeResponse(String message, String symbol, BigDecimal quantity, 
+                                              BigDecimal unitPrice, BigDecimal totalAmount, String operation, LocalDateTime transactionDate) {
+        return new TradeResponse(message, symbol, quantity, unitPrice, totalAmount, operation, transactionDate);
     }
 } 

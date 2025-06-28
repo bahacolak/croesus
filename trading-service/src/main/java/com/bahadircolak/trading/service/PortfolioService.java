@@ -40,6 +40,21 @@ public class PortfolioService {
         }
     }
 
+    public Map<String, Object> getPortfolioByUserAndSymbol(Long userId, String symbol) {
+        try {
+            String url = portfolioServiceUrl + "/api/portfolio/user/" + userId + "/symbol/" + symbol;
+            
+            HttpHeaders headers = createAuthHeaders();
+            RequestEntity<Void> request = new RequestEntity<>(headers, HttpMethod.GET, URI.create(url));
+            ResponseEntity<Map> response = restTemplate.exchange(request, Map.class);
+            
+            return response.getBody();
+        } catch (Exception e) {
+            log.debug("Portfolio not found for user: {} and symbol: {}", userId, symbol);
+            return null;
+        }
+    }
+
     public void updatePortfolio(Long userId, Long assetId, BigDecimal quantity, BigDecimal price, String action, String assetSymbol, String assetName) {
         try {
             String url = portfolioServiceUrl + "/api/portfolio/user/" + userId + "/asset/" + assetId + "/update";

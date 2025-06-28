@@ -41,6 +41,15 @@ public class PortfolioController {
         return ResponseEntity.notFound().build();
     }
 
+    @GetMapping("/user/{userId}/symbol/{symbol}")
+    public ResponseEntity<Portfolio> getPortfolioByUserAndSymbol(@PathVariable("userId") Long userId, @PathVariable("symbol") String symbol) {
+        Portfolio portfolio = portfolioService.getPortfolioByUserAndSymbol(userId, symbol);
+        if (portfolio != null) {
+            return ResponseEntity.ok(portfolio);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping("/user/{userId}/asset/{assetId}/update")
     public ResponseEntity<Portfolio> updatePortfolio(@PathVariable("userId") Long userId, 
                                                    @PathVariable("assetId") Long assetId,

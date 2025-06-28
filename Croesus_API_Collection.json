@@ -1059,6 +1059,43 @@
               }
             }
           ]
+        },
+        {
+          "name": "Get Portfolio by User and Symbol",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}:{{portfolio_service_port}}/api/portfolio/user/{{user_id}}/symbol/BTC",
+              "host": ["{{base_url}}"],
+              "port": "{{portfolio_service_port}}",
+              "path": ["api", "portfolio", "user", "{{user_id}}", "symbol", "BTC"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Portfolio entry retrieved by symbol', function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.quantity).to.be.a('number');",
+                  "        pm.expect(response.asset).to.be.an('object');",
+                  "        pm.expect(response.asset.symbol).to.eql('BTC');",
+                  "    } else if (pm.response.code === 404) {",
+                  "        pm.expect(true).to.be.true; // Portfolio entry not found is valid",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

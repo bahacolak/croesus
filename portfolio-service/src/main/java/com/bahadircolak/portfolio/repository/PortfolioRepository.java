@@ -18,6 +18,9 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, Long> {
     @Query("SELECT p FROM Portfolio p WHERE p.userId = :userId AND p.asset.id = :assetId")
     Optional<Portfolio> findByUserIdAndAssetId(@Param("userId") Long userId, @Param("assetId") Long assetId);
     
+    @Query("SELECT p FROM Portfolio p WHERE p.userId = :userId AND p.asset.symbol = :symbol")
+    Optional<Portfolio> findByUserIdAndAssetSymbol(@Param("userId") Long userId, @Param("symbol") String symbol);
+    
     @Query("SELECT SUM(p.currentValue) FROM Portfolio p WHERE p.userId = :userId")
     BigDecimal getTotalValueByUserId(@Param("userId") Long userId);
     

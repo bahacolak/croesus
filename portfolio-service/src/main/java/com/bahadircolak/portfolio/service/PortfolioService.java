@@ -46,6 +46,10 @@ public class PortfolioService {
         return portfolioRepository.findByUserIdAndAssetId(userId, assetId).orElse(null);
     }
 
+    public Portfolio getPortfolioByUserAndSymbol(Long userId, String symbol) {
+        return portfolioRepository.findByUserIdAndAssetSymbol(userId, symbol).orElse(null);
+    }
+
     public Portfolio savePortfolio(Portfolio portfolio) {
         return portfolioRepository.save(portfolio);
     }
