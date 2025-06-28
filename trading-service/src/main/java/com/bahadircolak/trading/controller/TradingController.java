@@ -1,7 +1,8 @@
 package com.bahadircolak.trading.controller;
 
 import com.bahadircolak.trading.dto.request.TradeRequest;
-import com.bahadircolak.trading.service.TradingService;
+import com.bahadircolak.trading.dto.response.TradeResponse;
+import com.bahadircolak.trading.service.ITradingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,15 +14,15 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class TradingController {
 
-    private final TradingService tradingService;
+    private final ITradingService tradingService;
 
     @PostMapping("/buy")
-    public ResponseEntity<?> buyAsset(@Valid @RequestBody TradeRequest request) {
+    public ResponseEntity<TradeResponse> buyAsset(@Valid @RequestBody TradeRequest request) {
         return tradingService.buyAsset(request);
     }
 
     @PostMapping("/sell")
-    public ResponseEntity<?> sellAsset(@Valid @RequestBody TradeRequest request) {
+    public ResponseEntity<TradeResponse> sellAsset(@Valid @RequestBody TradeRequest request) {
         return tradingService.sellAsset(request);
     }
 } 

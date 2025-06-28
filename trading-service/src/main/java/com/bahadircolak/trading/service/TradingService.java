@@ -13,9 +13,9 @@ import com.bahadircolak.trading.exception.TradingException;
 import com.bahadircolak.trading.model.Transaction;
 import com.bahadircolak.trading.model.Transaction.TransactionType;
 import com.bahadircolak.trading.repository.TransactionRepository;
+import com.bahadircolak.trading.validation.TradeValidator;
 import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,32 +27,40 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
-public class TradingService {
+public class TradingService implements ITradingService {
 
     private final UserClient userClient;
     private final MarketService marketService;
     private final PortfolioService portfolioService;
     private final TransactionRepository transactionRepository;
+    private final TradeValidator tradeValidator;
 
+    @Override
     @Transactional
     public ResponseEntity<TradeResponse> buyAsset(TradeRequest request) {
-        Long userId = getCurrentUserId();
-        AssetInfo asset = validateAndGetAsset(request.getSymbol());
-        BigDecimal totalCost = calculateTotalCost(asset.getCurrentPrice(), request.getQuantity());
+        tradeValidator.validateTradeRequest(request);
         
+        Long userId = getCurrentUserId();
+        AssetInfo asset = getAndValidateAsset(request.getSymbol());
+        
+        BigDecimal totalCost = calculateTotalCost(asset.getCurrentPrice(), request.getQuantity());
         validateSufficientBalance(userId, totalCost);
         
         return executeBuyTransaction(userId, asset, request, totalCost);
     }
 
+    @Override
     @Transactional
     public ResponseEntity<TradeResponse> sellAsset(TradeRequest request) {
+        tradeValidator.validateTradeRequest(request);
+        
         Long userId = getCurrentUserId();
-        AssetInfo asset = validateAndGetAsset(request.getSymbol());
+        AssetInfo asset = getAndValidateAsset(request.getSymbol());
+        
         validateSufficientAssetInPortfolio(userId, asset, request.getQuantity());
+        
         BigDecimal saleAmount = calculateTotalCost(asset.getCurrentPrice(), request.getQuantity());
         return executeSellTransaction(userId, asset, request, saleAmount);
     }
@@ -62,7 +70,7 @@ public class TradingService {
         return userClient.getUserIdByUsername(userDetails.getUsername());
     }
     
-    private AssetInfo validateAndGetAsset(String symbol) {
+    private AssetInfo getAndValidateAsset(String symbol) {
         Map<String, Object> assetData = marketService.getAssetBySymbol(symbol);
         
         if (assetData == null) {
@@ -97,7 +105,6 @@ public class TradingService {
         Map<String, Object> portfolio = portfolioService.getPortfolioByUserAndAsset(userId, asset.getId());
         
         if (portfolio == null) {
-            log.debug("Portfolio not found with market ID: {}, trying to find by symbol: {}", asset.getId(), asset.getSymbol());
             portfolio = portfolioService.getPortfolioByUserAndSymbol(userId, asset.getSymbol());
         }
         
@@ -121,15 +128,11 @@ public class TradingService {
         Transaction transaction = createTransaction(userId, asset, request, TransactionType.BUY, totalCost, TradingConstants.BUY_OPERATION);
         Transaction savedTransaction = transactionRepository.save(transaction);
         
-        return ResponseEntity.ok(createTradeResponse(
-                request.getQuantity() + " " + asset.getSymbol() + " successfully purchased.",
-                asset.getSymbol(),
-                request.getQuantity(),
-                asset.getCurrentPrice(),
-                totalCost,
-                TradingConstants.BUY_OPERATION,
-                savedTransaction.getTransactionDate()
-        ));
+        String successMessage = String.format("%s %s successfully purchased.", request.getQuantity(), asset.getSymbol());
+        TradeResponse response = createTradeResponse(successMessage, asset.getSymbol(), request.getQuantity(), 
+                asset.getCurrentPrice(), totalCost, TradingConstants.BUY_OPERATION, savedTransaction.getTransactionDate());
+        
+        return ResponseEntity.ok(response);
     }
     
     private ResponseEntity<TradeResponse> executeSellTransaction(Long userId, AssetInfo asset, TradeRequest request, BigDecimal saleAmount) {
@@ -142,15 +145,11 @@ public class TradingService {
         Transaction transaction = createTransaction(userId, asset, request, TransactionType.SELL, saleAmount, TradingConstants.SELL_OPERATION);
         Transaction savedTransaction = transactionRepository.save(transaction);
         
-        return ResponseEntity.ok(createTradeResponse(
-                request.getQuantity() + " " + asset.getSymbol() + " successfully sold.",
-                asset.getSymbol(),
-                request.getQuantity(),
-                asset.getCurrentPrice(),
-                saleAmount,
-                TradingConstants.SELL_OPERATION,
-                savedTransaction.getTransactionDate()
-        ));
+        String successMessage = String.format("%s %s successfully sold.", request.getQuantity(), asset.getSymbol());
+        TradeResponse response = createTradeResponse(successMessage, asset.getSymbol(), request.getQuantity(), 
+                asset.getCurrentPrice(), saleAmount, TradingConstants.SELL_OPERATION, savedTransaction.getTransactionDate());
+        
+        return ResponseEntity.ok(response);
     }
     
     private Long getOrCreatePortfolioAssetId(Long userId, AssetInfo asset) {
