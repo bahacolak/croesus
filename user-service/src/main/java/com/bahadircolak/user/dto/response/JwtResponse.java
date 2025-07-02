@@ -1,5 +1,6 @@
 package com.bahadircolak.user.dto.response;
 
+import com.bahadircolak.user.constants.UserConstants;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -10,7 +11,7 @@ import java.util.List;
 public class JwtResponse {
     
     private String token;
-    private String type = "Bearer";
+    private String type = UserConstants.JWT_TOKEN_TYPE;
     private Long id;
     private String username;
     private String email;

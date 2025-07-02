@@ -1,10 +1,13 @@
 package com.bahadircolak.market.service;
 
+import com.bahadircolak.market.constants.ErrorMessages;
+import com.bahadircolak.market.constants.MarketConstants;
 import com.bahadircolak.market.dto.CoinGeckoResponseDto;
+import com.bahadircolak.market.exception.AssetNotFoundException;
+import com.bahadircolak.market.exception.MarketDataException;
 import com.bahadircolak.market.model.CryptoCurrency;
 import com.bahadircolak.market.repository.CryptoCurrencyRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -19,10 +22,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
-public class CryptoService {
+public class CryptoService implements ICryptoService {
 
     private final RestTemplate restTemplate;
     private final CryptoCurrencyRepository repository;
@@ -30,38 +32,100 @@ public class CryptoService {
     @Value("${coingecko.api.url}")
     private String coingeckoApiUrl;
 
+    @Override
     public List<CryptoCurrency> fetchAndSaveLatestPrices() {
         try {
-            String url = coingeckoApiUrl + "/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false";
+            String apiUrl = buildCoinGeckoApiUrl();
+            List<CoinGeckoResponseDto> coinGeckoData = fetchDataFromCoinGecko(apiUrl);
+            validateApiResponse(coinGeckoData);
             
-            log.info("Fetching cryptocurrency data from: {}", url);
-            
-            ResponseEntity<List<CoinGeckoResponseDto>> responseEntity = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    null,
-                    new ParameterizedTypeReference<List<CoinGeckoResponseDto>>() {}
-            );
-
-            List<CoinGeckoResponseDto> coinGeckoData = responseEntity.getBody();
-            
-            if (coinGeckoData == null || coinGeckoData.isEmpty()) {
-                log.warn("No data received from CoinGecko API");
-                return List.of();
-            }
-
-            List<CryptoCurrency> cryptoCurrencies = coinGeckoData.stream()
-                    .map(this::convertToCryptoCurrency)
-                    .collect(Collectors.toList());
-
-            List<CryptoCurrency> savedCryptos = repository.saveAll(cryptoCurrencies);
-            log.info("Successfully updated {} cryptocurrencies", savedCryptos.size());
-            
-            return savedCryptos;
+            List<CryptoCurrency> cryptoCurrencies = convertToEntities(coinGeckoData);
+            return saveCryptoCurrencies(cryptoCurrencies);
+        } catch (MarketDataException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Error fetching cryptocurrency data from CoinGecko", e);
-            throw new RuntimeException("Failed to fetch cryptocurrency data: " + e.getMessage());
+            throw new MarketDataException(ErrorMessages.CRYPTOCURRENCY_UPDATE_FAILED, e);
         }
+    }
+
+    @Override
+    public List<CryptoCurrency> getAllCryptoCurrencies() {
+        return repository.findAllOrderByMarketCapDesc();
+    }
+
+    @Override
+    public Optional<CryptoCurrency> getCryptoCurrencyBySymbol(String symbol) {
+        return repository.findBySymbol(symbol.toUpperCase());
+    }
+
+    @Override
+    public Optional<CryptoCurrency> getCryptoCurrencyById(String coinId) {
+        return repository.findByCoinId(coinId);
+    }
+
+    @Override
+    public List<CryptoCurrency> searchCryptoCurrencies(String query) {
+        return repository.findByNameContainingIgnoreCase(query);
+    }
+
+    @Override
+    public List<CryptoCurrency> getTopGainers() {
+        return repository.findTopGainers();
+    }
+
+    @Override
+    public List<CryptoCurrency> getTopLosers() {
+        return repository.findTopLosers();
+    }
+
+    @Override
+    public BigDecimal getCryptoPriceBySymbol(String symbol) {
+        Optional<CryptoCurrency> crypto = getCryptoCurrencyBySymbol(symbol);
+        return crypto.map(CryptoCurrency::getCurrentPrice)
+                .orElseThrow(() -> new AssetNotFoundException(
+                    String.format(ErrorMessages.PRICE_NOT_AVAILABLE, symbol)
+                ));
+    }
+
+    private String buildCoinGeckoApiUrl() {
+        return String.format("%s/coins/markets?vs_currency=%s&order=%s&per_page=%d&page=%d&sparkline=%s",
+            coingeckoApiUrl,
+            MarketConstants.COINGECKO_VS_CURRENCY,
+            MarketConstants.COINGECKO_ORDER,
+            MarketConstants.COINGECKO_DEFAULT_PER_PAGE,
+            MarketConstants.COINGECKO_DEFAULT_PAGE,
+            MarketConstants.COINGECKO_SPARKLINE
+        );
+    }
+
+    private List<CoinGeckoResponseDto> fetchDataFromCoinGecko(String apiUrl) {
+        try {
+            ResponseEntity<List<CoinGeckoResponseDto>> responseEntity = restTemplate.exchange(
+                apiUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<CoinGeckoResponseDto>>() {}
+            );
+            return responseEntity.getBody();
+        } catch (Exception e) {
+            throw new MarketDataException(ErrorMessages.COINGECKO_API_ERROR, e);
+        }
+    }
+
+    private void validateApiResponse(List<CoinGeckoResponseDto> coinGeckoData) {
+        if (coinGeckoData == null || coinGeckoData.isEmpty()) {
+            throw new MarketDataException(ErrorMessages.COINGECKO_NO_DATA);
+        }
+    }
+
+    private List<CryptoCurrency> convertToEntities(List<CoinGeckoResponseDto> coinGeckoData) {
+        return coinGeckoData.stream()
+                .map(this::convertToCryptoCurrency)
+                .collect(Collectors.toList());
+    }
+
+    private List<CryptoCurrency> saveCryptoCurrencies(List<CryptoCurrency> cryptoCurrencies) {
+        return repository.saveAll(cryptoCurrencies);
     }
 
     private CryptoCurrency convertToCryptoCurrency(CoinGeckoResponseDto dto) {
@@ -77,51 +141,20 @@ public class CryptoService {
         currency.setCirculatingSupply(dto.getCirculatingSupply());
         currency.setTotalSupply(dto.getTotalSupply());
         currency.setImageUrl(dto.getImageUrl());
-        
-        if (dto.getLastUpdated() != null) {
-            try {
-                DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
-                currency.setLastUpdated(LocalDateTime.parse(dto.getLastUpdated(), formatter));
-            } catch (Exception e) {
-                log.warn("Failed to parse last updated date: {}", dto.getLastUpdated());
-                currency.setLastUpdated(LocalDateTime.now());
-            }
-        } else {
-            currency.setLastUpdated(LocalDateTime.now());
-        }
-        
+        currency.setLastUpdated(parseLastUpdatedDate(dto.getLastUpdated()));
         return currency;
     }
 
-    public List<CryptoCurrency> getAllCryptoCurrencies() {
-        return repository.findAllOrderByMarketCapDesc();
-    }
-
-    public Optional<CryptoCurrency> getCryptoCurrencyBySymbol(String symbol) {
-        return repository.findBySymbol(symbol.toUpperCase());
-    }
-
-    public Optional<CryptoCurrency> getCryptoCurrencyById(String coinId) {
-        return repository.findByCoinId(coinId);
-    }
-
-    public List<CryptoCurrency> searchCryptoCurrencies(String query) {
-        return repository.findByNameContainingIgnoreCase(query);
-    }
-
-    public List<CryptoCurrency> getTopGainers() {
-        return repository.findTopGainers();
-    }
-
-    public List<CryptoCurrency> getTopLosers() {
-        return repository.findTopLosers();
-    }
-
-    public BigDecimal getCryptoPriceBySymbol(String symbol) {
-        Optional<CryptoCurrency> crypto = getCryptoCurrencyBySymbol(symbol);
-        if (crypto.isPresent()) {
-            return crypto.get().getCurrentPrice();
+    private LocalDateTime parseLastUpdatedDate(String lastUpdated) {
+        if (lastUpdated == null) {
+            return LocalDateTime.now();
         }
-        throw new RuntimeException("Cryptocurrency not found: " + symbol);
+        
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+            return LocalDateTime.parse(lastUpdated, formatter);
+        } catch (Exception e) {
+            return LocalDateTime.now();
+        }
     }
 } 

@@ -67,43 +67,20 @@ public class PortfolioService implements IPortfolioService {
     @Override
     @Transactional
     public Portfolio updatePortfolio(Long userId, Long assetId, UpdatePortfolioRequest request) {
-        try {
-            System.out.println("DEBUG: Portfolio update request received - userId: " + userId + ", assetId: " + assetId);
-            System.out.println("DEBUG: Request details - " + request);
-            
-            // Temporary: Skip validation to debug issue
-            // portfolioValidator.validateUpdateRequest(request);
-            
-            System.out.println("DEBUG: Getting or creating asset...");
-            Asset asset = getOrCreateAsset(assetId, request);
-            System.out.println("DEBUG: Asset created/found: " + asset.getSymbol());
-            
-            System.out.println("DEBUG: Getting existing portfolio...");
-            Portfolio portfolio = getExistingPortfolio(userId, asset.getId());
-            System.out.println("DEBUG: Portfolio found: " + (portfolio != null));
-            
-            if (PortfolioConstants.BUY_ACTION.equals(request.getAction())) {
-                System.out.println("DEBUG: Processing BUY operation...");
-                portfolio = processBuyOperation(portfolio, asset, userId, request);
-            } else if (PortfolioConstants.SELL_ACTION.equals(request.getAction())) {
-                System.out.println("DEBUG: Processing SELL operation...");
-                portfolio = processSellOperation(portfolio, request);
-                if (portfolio == null) return null; // Portfolio deleted
-            }
-            
-            System.out.println("DEBUG: Updating portfolio metrics...");
-            updatePortfolioMetrics(portfolio, asset);
-            
-            System.out.println("DEBUG: Saving portfolio...");
-            Portfolio saved = portfolioRepository.save(portfolio);
-            System.out.println("DEBUG: Portfolio saved successfully");
-            return saved;
-            
-        } catch (Exception e) {
-            System.err.println("ERROR in updatePortfolio: " + e.getMessage());
-            e.printStackTrace();
-            throw e;
+        portfolioValidator.validateUpdateRequest(request);
+        
+        Asset asset = getOrCreateAsset(assetId, request);
+        Portfolio portfolio = getExistingPortfolio(userId, asset.getId());
+        
+        if (PortfolioConstants.BUY_ACTION.equals(request.getAction())) {
+            portfolio = processBuyOperation(portfolio, asset, userId, request);
+        } else if (PortfolioConstants.SELL_ACTION.equals(request.getAction())) {
+            portfolio = processSellOperation(portfolio, request);
+            if (portfolio == null) return null;
         }
+        
+        updatePortfolioMetrics(portfolio, asset);
+        return portfolioRepository.save(portfolio);
     }
 
     private Long getCurrentUserId() {

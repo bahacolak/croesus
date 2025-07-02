@@ -1,10 +1,12 @@
 package com.bahadircolak.market.controller;
 
+import com.bahadircolak.market.constants.ErrorMessages;
 import com.bahadircolak.market.dto.response.MessageResponse;
+import com.bahadircolak.market.exception.AssetNotFoundException;
 import com.bahadircolak.market.model.CryptoCurrency;
-import com.bahadircolak.market.service.CryptoService;
+import com.bahadircolak.market.service.ICryptoService;
+import com.bahadircolak.market.validation.MarketValidator;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,93 +17,61 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/crypto")
 @RequiredArgsConstructor
-@Slf4j
 public class CryptoController {
 
-    private final CryptoService cryptoService;
+    private final ICryptoService cryptoService;
+    private final MarketValidator validator;
 
     @GetMapping
     public ResponseEntity<List<CryptoCurrency>> getAllCryptoCurrencies() {
-        try {
-            List<CryptoCurrency> cryptos = cryptoService.getAllCryptoCurrencies();
-            return ResponseEntity.ok(cryptos);
-        } catch (Exception e) {
-            log.error("Error fetching all cryptocurrencies", e);
-            return ResponseEntity.internalServerError().build();
-        }
+        List<CryptoCurrency> cryptos = cryptoService.getAllCryptoCurrencies();
+        return ResponseEntity.ok(cryptos);
     }
 
     @GetMapping("/{symbol}")
-    public ResponseEntity<CryptoCurrency> getCryptoCurrencyBySymbol(@PathVariable("symbol") String symbol) {
-        try {
-            Optional<CryptoCurrency> crypto = cryptoService.getCryptoCurrencyBySymbol(symbol);
-            if (crypto.isPresent()) {
-                return ResponseEntity.ok(crypto.get());
-            }
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("Error fetching cryptocurrency by symbol: {}", symbol, e);
-            return ResponseEntity.internalServerError().build();
-        }
+    public ResponseEntity<CryptoCurrency> getCryptoCurrencyBySymbol(@PathVariable String symbol) {
+        validator.validateSymbol(symbol);
+        Optional<CryptoCurrency> crypto = cryptoService.getCryptoCurrencyBySymbol(symbol);
+        return crypto.map(ResponseEntity::ok)
+                .orElseThrow(() -> new AssetNotFoundException(
+                    String.format(ErrorMessages.ASSET_NOT_FOUND_BY_SYMBOL, symbol)
+                ));
     }
 
     @GetMapping("/{symbol}/price")
-    public ResponseEntity<BigDecimal> getCryptoPriceBySymbol(@PathVariable("symbol") String symbol) {
-        try {
-            BigDecimal price = cryptoService.getCryptoPriceBySymbol(symbol);
-            return ResponseEntity.ok(price);
-        } catch (RuntimeException e) {
-            log.error("Error fetching price for symbol: {}", symbol, e);
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("Unexpected error fetching price for symbol: {}", symbol, e);
-            return ResponseEntity.internalServerError().build();
-        }
+    public ResponseEntity<BigDecimal> getCryptoPriceBySymbol(@PathVariable String symbol) {
+        validator.validateSymbol(symbol);
+        BigDecimal price = cryptoService.getCryptoPriceBySymbol(symbol);
+        return ResponseEntity.ok(price);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<CryptoCurrency>> searchCryptoCurrencies(@RequestParam("q") String q) {
-        try {
-            List<CryptoCurrency> cryptos = cryptoService.searchCryptoCurrencies(q);
-            return ResponseEntity.ok(cryptos);
-        } catch (Exception e) {
-            log.error("Error searching cryptocurrencies with query: {}", q, e);
-            return ResponseEntity.internalServerError().build();
-        }
+    public ResponseEntity<List<CryptoCurrency>> searchCryptoCurrencies(@RequestParam("q") String query) {
+        validator.validateSearchQuery(query);
+        List<CryptoCurrency> cryptos = cryptoService.searchCryptoCurrencies(query);
+        return ResponseEntity.ok(cryptos);
     }
 
     @GetMapping("/gainers")
     public ResponseEntity<List<CryptoCurrency>> getTopGainers() {
-        try {
-            List<CryptoCurrency> gainers = cryptoService.getTopGainers();
-            return ResponseEntity.ok(gainers);
-        } catch (Exception e) {
-            log.error("Error fetching top gainers", e);
-            return ResponseEntity.internalServerError().build();
-        }
+        List<CryptoCurrency> gainers = cryptoService.getTopGainers();
+        return ResponseEntity.ok(gainers);
     }
 
     @GetMapping("/losers")
     public ResponseEntity<List<CryptoCurrency>> getTopLosers() {
-        try {
-            List<CryptoCurrency> losers = cryptoService.getTopLosers();
-            return ResponseEntity.ok(losers);
-        } catch (Exception e) {
-            log.error("Error fetching top losers", e);
-            return ResponseEntity.internalServerError().build();
-        }
+        List<CryptoCurrency> losers = cryptoService.getTopLosers();
+        return ResponseEntity.ok(losers);
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<MessageResponse> refreshCryptoCurrencies() {
-        try {
-            List<CryptoCurrency> updatedCryptos = cryptoService.fetchAndSaveLatestPrices();
-            String message = String.format("Successfully updated %d cryptocurrencies", updatedCryptos.size());
-            return ResponseEntity.ok(new MessageResponse(message));
-        } catch (Exception e) {
-            log.error("Error refreshing cryptocurrency data", e);
-            return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Failed to refresh cryptocurrency data: " + e.getMessage(), false));
-        }
+        List<CryptoCurrency> updatedCryptos = cryptoService.fetchAndSaveLatestPrices();
+        String message = buildRefreshSuccessMessage(updatedCryptos.size());
+        return ResponseEntity.ok(new MessageResponse(message, true));
+    }
+
+    private String buildRefreshSuccessMessage(int count) {
+        return String.format("Successfully updated %d cryptocurrencies", count);
     }
 } 

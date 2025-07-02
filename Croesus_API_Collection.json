@@ -110,6 +110,7 @@
                   "    pm.test('User registered successfully', function () {",
                   "        const response = pm.response.json();",
                   "        pm.expect(response.message).to.include('successfully');",
+                  "        pm.expect(response.success).to.be.true;",
                   "    });",
                   "}"
                 ]
@@ -156,6 +157,7 @@
                   "    pm.test('Login successful and JWT saved', function () {",
                   "        pm.expect(response.token).to.not.be.undefined;",
                   "        pm.expect(response.token).to.have.length.above(10);",
+                  "        pm.expect(response.success).to.be.true;",
                   "    });",
                   "    ",
                   "    pm.test('User details received', function () {",
@@ -206,6 +208,7 @@
                   "    pm.test('Login successful and JWT saved', function () {",
                   "        pm.expect(response.token).to.not.be.undefined;",
                   "        pm.expect(response.token).to.have.length.above(10);",
+                  "        pm.expect(response.success).to.be.true;",
                   "    });",
                   "    ",
                   "    pm.test('User details received', function () {",
@@ -473,6 +476,7 @@
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
                   "    pm.expect(response.message).to.include('successful');",
+                  "    pm.expect(response.success).to.be.true;",
                   "});"
                 ]
               }
@@ -513,6 +517,7 @@
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
                   "    pm.expect(response.message).to.include('successful');",
+                  "    pm.expect(response.success).to.be.true;",
                   "});"
                 ]
               }
@@ -553,6 +558,7 @@
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
                   "    pm.expect(response.message).to.include('successful');",
+                  "    pm.expect(response.success).to.be.true;",
                   "});"
                 ]
               }
@@ -757,7 +763,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"symbol\": \"bitcoin\",\n  \"quantity\": 0.001,\n  \"description\": \"Buy Bitcoin with secure JWT\"\n}"
+              "raw": "{\n  \"symbol\": \"BTC\",\n  \"quantity\": 0.001,\n  \"description\": \"Buy Bitcoin with secure JWT\"\n}"
             },
             "url": {
               "raw": "{{base_url}}:{{trading_service_port}}/api/trade/buy",
@@ -774,7 +780,10 @@
                   "pm.test('Buy order successful', function () {",
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.message).to.include('successful');",
+                  "    pm.expect(response.transactionType).to.eql('BUY');",
+                  "    pm.expect(response.assetSymbol).to.not.be.undefined;",
+                  "    pm.expect(response.quantity).to.be.a('number');",
+                  "    pm.expect(response.totalAmount).to.be.a('number');",
                   "});"
                 ]
               }
@@ -797,7 +806,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"symbol\": \"bitcoin\",\n  \"quantity\": 0.0005,\n  \"description\": \"Sell Bitcoin with secure JWT\"\n}"
+              "raw": "{\n  \"symbol\": \"BTC\",\n  \"quantity\": 0.0005,\n  \"description\": \"Sell Bitcoin with secure JWT\"\n}"
             },
             "url": {
               "raw": "{{base_url}}:{{trading_service_port}}/api/trade/sell",
@@ -814,7 +823,10 @@
                   "pm.test('Sell order successful', function () {",
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.message).to.include('successful');",
+                  "    pm.expect(response.transactionType).to.eql('SELL');",
+                  "    pm.expect(response.assetSymbol).to.not.be.undefined;",
+                  "    pm.expect(response.quantity).to.be.a('number');",
+                  "    pm.expect(response.totalAmount).to.be.a('number');",
                   "});"
                 ]
               }

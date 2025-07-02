@@ -5,9 +5,9 @@ import com.bahadircolak.wallet.model.WalletTransaction;
 import com.bahadircolak.wallet.model.WalletTransaction.TransactionType;
 import com.bahadircolak.wallet.model.WalletTransaction.TransactionStatus;
 import com.bahadircolak.wallet.repository.WalletTransactionRepository;
+import com.bahadircolak.wallet.validation.WalletValidator;
 import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -15,40 +15,56 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
-public class WalletTransactionService {
+public class WalletTransactionService implements IWalletTransactionService {
 
     private final WalletTransactionRepository transactionRepository;
     private final UserClient userClient;
+    private final WalletValidator validator;
 
+    @Override
     public WalletTransaction saveTransaction(WalletTransaction transaction) {
         return transactionRepository.save(transaction);
     }
 
+    @Override
     public List<WalletTransaction> getUserTransactions() {
-        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userClient.getUserIdByUsername(username);
+        Long userId = getCurrentUserId();
         return transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
     }
 
+    @Override
     public List<WalletTransaction> getUserTransactionsByType(TransactionType type) {
-        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userClient.getUserIdByUsername(username);
+        Long userId = getCurrentUserId();
         return transactionRepository.findByUserIdAndType(userId, type);
     }
 
+    @Override
     public List<WalletTransaction> getUserTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userClient.getUserIdByUsername(username);
+        validator.validateDateRange(startDate, endDate);
+        Long userId = getCurrentUserId();
         return transactionRepository.findByUserIdAndTransactionDateBetween(userId, startDate, endDate);
     }
 
+    @Override
     public TransactionSummaryResponse getTransactionSummary() {
-        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = userClient.getUserIdByUsername(username);
+        Long userId = getCurrentUserId();
+        return buildTransactionSummary(userId);
+    }
 
+    @Override
+    public List<WalletTransaction> getTransactionsByUserId(Long userId) {
+        validator.validateUserId(userId);
+        return transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
+    }
+
+    private Long getCurrentUserId() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userClient.getUserIdByUsername(username);
+    }
+
+    private TransactionSummaryResponse buildTransactionSummary(Long userId) {
         TransactionSummaryResponse summary = new TransactionSummaryResponse();
 
         summary.setTotalDeposits(getTotalAmountByTypeAndStatus(userId, TransactionType.DEPOSIT, TransactionStatus.COMPLETED));
@@ -58,20 +74,11 @@ public class WalletTransactionService {
 
         summary.setDepositCount(getTransactionCountByType(userId, TransactionType.DEPOSIT));
         summary.setWithdrawalCount(getTransactionCountByType(userId, TransactionType.WITHDRAWAL));
-        summary.setTransferCount(
-                getTransactionCountByType(userId, TransactionType.TRANSFER_IN) + 
-                getTransactionCountByType(userId, TransactionType.TRANSFER_OUT)
-        );
+        summary.setTransferCount(calculateTotalTransferCount(userId));
 
-        BigDecimal totalIn = summary.getTotalDeposits().add(summary.getTotalTransfersIn());
-        BigDecimal totalOut = summary.getTotalWithdrawals().add(summary.getTotalTransfersOut());
-        summary.setNetAmount(totalIn.subtract(totalOut));
+        summary.setNetAmount(calculateNetAmount(summary));
 
         return summary;
-    }
-
-    public List<WalletTransaction> getTransactionsByUserId(Long userId) {
-        return transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
     }
 
     private BigDecimal getTotalAmountByTypeAndStatus(Long userId, TransactionType type, TransactionStatus status) {
@@ -81,5 +88,16 @@ public class WalletTransactionService {
 
     private Long getTransactionCountByType(Long userId, TransactionType type) {
         return transactionRepository.countByUserIdAndType(userId, type);
+    }
+
+    private Long calculateTotalTransferCount(Long userId) {
+        return getTransactionCountByType(userId, TransactionType.TRANSFER_IN) + 
+               getTransactionCountByType(userId, TransactionType.TRANSFER_OUT);
+    }
+
+    private BigDecimal calculateNetAmount(TransactionSummaryResponse summary) {
+        BigDecimal totalIn = summary.getTotalDeposits().add(summary.getTotalTransfersIn());
+        BigDecimal totalOut = summary.getTotalWithdrawals().add(summary.getTotalTransfersOut());
+        return totalIn.subtract(totalOut);
     }
 } 

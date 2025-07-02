@@ -1,244 +1,295 @@
 package com.bahadircolak.wallet.service;
 
+import com.bahadircolak.wallet.constants.ErrorMessages;
+import com.bahadircolak.wallet.constants.SuccessMessages;
+import com.bahadircolak.wallet.constants.WalletConstants;
 import com.bahadircolak.wallet.dto.request.TransferRequest;
 import com.bahadircolak.wallet.dto.request.WalletTransactionRequest;
 import com.bahadircolak.wallet.dto.response.MessageResponse;
 import com.bahadircolak.wallet.dto.response.WalletResponse;
+import com.bahadircolak.wallet.exception.InsufficientBalanceException;
+import com.bahadircolak.wallet.exception.UserNotFoundException;
+import com.bahadircolak.wallet.exception.WalletNotFoundException;
 import com.bahadircolak.wallet.model.Wallet;
 import com.bahadircolak.wallet.model.WalletTransaction;
 import com.bahadircolak.wallet.model.WalletTransaction.TransactionType;
 import com.bahadircolak.wallet.repository.WalletRepository;
+import com.bahadircolak.wallet.validation.WalletValidator;
 import com.bahadircolak.common.client.UserClient;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
-public class WalletService {
+public class WalletService implements IWalletService {
 
     private final WalletRepository walletRepository;
-    private final WalletTransactionService transactionService;
+    private final IWalletTransactionService transactionService;
     private final UserClient userClient;
+    private final WalletValidator validator;
 
+    @Override
     @Transactional
     public WalletResponse createWallet(Long userId) {
-        if (walletRepository.existsByUserId(userId)) {
-            throw new RuntimeException("Wallet already exists for user: " + userId);
-        }
+        validator.validateUserId(userId);
+        checkWalletNotExists(userId);
+        checkUserExists(userId);
 
-        // Check if user exists
-        if (!userClient.userExists(userId)) {
-            throw new RuntimeException("User not found: " + userId);
-        }
-
-        Wallet wallet = new Wallet();
-        wallet.setUserId(userId);
-        wallet.setBalance(BigDecimal.ZERO);
-        wallet.setCurrencyCode("USD");
-        wallet.setIsActive(true);
-
+        Wallet wallet = buildNewWallet(userId);
         Wallet savedWallet = walletRepository.save(wallet);
-        log.info("Created wallet for user: {}", userId);
-
+        
         return convertToWalletResponse(savedWallet);
     }
 
+    @Override
     public WalletResponse getWalletByUserId(Long userId) {
-        Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found for user: " + userId));
+        validator.validateUserId(userId);
+        Wallet wallet = findActiveWalletByUserId(userId);
         return convertToWalletResponse(wallet);
     }
 
+    @Override
     public BigDecimal getBalance(Long userId) {
+        validator.validateUserId(userId);
         return walletRepository.findBalanceByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found for user: " + userId));
+                .orElseThrow(() -> new WalletNotFoundException(
+                    String.format(ErrorMessages.WALLET_NOT_FOUND_FOR_USER, userId)
+                ));
     }
 
+    @Override
     public WalletResponse getCurrentUserWallet() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = userClient.getUserIdByUsername(username);
-        
+        Long userId = getCurrentUserId();
         Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
                 .orElseGet(() -> createWalletForUser(userId));
-        
         return convertToWalletResponse(wallet);
     }
 
+    @Override
     @Transactional
     public MessageResponse deposit(WalletTransactionRequest request) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = userClient.getUserIdByUsername(username);
-
-        Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
-                .orElseGet(() -> createWalletForUser(userId));
-
+        validator.validateTransactionRequest(request);
+        
+        Long userId = getCurrentUserId();
+        Wallet wallet = getOrCreateWallet(userId);
+        
         BigDecimal oldBalance = wallet.getBalance();
         BigDecimal newBalance = oldBalance.add(request.getAmount());
         
-        wallet.setBalance(newBalance);
-        walletRepository.save(wallet);
-
-        WalletTransaction transaction = new WalletTransaction();
-        transaction.setUserId(userId);
-        transaction.setWalletId(wallet.getId());
-        transaction.setType(TransactionType.DEPOSIT);
-        transaction.setAmount(request.getAmount());
-        transaction.setBalanceBefore(oldBalance);
-        transaction.setBalanceAfter(newBalance);
-        transaction.setDescription(request.getDescription() != null ? request.getDescription() : "Deposit");
-        transaction.setReferenceId(request.getReferenceId() != null ? request.getReferenceId() : UUID.randomUUID().toString());
+        updateWalletBalance(wallet, newBalance);
+        createDepositTransaction(userId, wallet.getId(), request, oldBalance, newBalance);
         
-        transactionService.saveTransaction(transaction);
-
-        log.info("Deposit successful for user: {}, amount: {}", userId, request.getAmount());
-        return new MessageResponse("Deposit successful. New balance: " + newBalance);
+        return new MessageResponse(
+            String.format(SuccessMessages.DEPOSIT_SUCCESSFUL, newBalance), 
+            true
+        );
     }
 
+    @Override
     @Transactional
     public MessageResponse withdraw(WalletTransactionRequest request) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = userClient.getUserIdByUsername(username);
-
-        Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found for user: " + userId));
-
+        validator.validateTransactionRequest(request);
+        
+        Long userId = getCurrentUserId();
+        Wallet wallet = findActiveWalletByUserId(userId);
+        
         BigDecimal oldBalance = wallet.getBalance();
+        validateSufficientBalance(oldBalance, request.getAmount());
         
-        if (oldBalance.compareTo(request.getAmount()) < 0) {
-            throw new RuntimeException("Insufficient balance. Current balance: " + oldBalance + ", Requested: " + request.getAmount());
-        }
-
         BigDecimal newBalance = oldBalance.subtract(request.getAmount());
-        wallet.setBalance(newBalance);
-        walletRepository.save(wallet);
-
-        // Create transaction record
-        WalletTransaction transaction = new WalletTransaction();
-        transaction.setUserId(userId);
-        transaction.setWalletId(wallet.getId());
-        transaction.setType(TransactionType.WITHDRAWAL);
-        transaction.setAmount(request.getAmount());
-        transaction.setBalanceBefore(oldBalance);
-        transaction.setBalanceAfter(newBalance);
-        transaction.setDescription(request.getDescription() != null ? request.getDescription() : "Withdrawal");
-        transaction.setReferenceId(request.getReferenceId() != null ? request.getReferenceId() : UUID.randomUUID().toString());
+        updateWalletBalance(wallet, newBalance);
+        createWithdrawalTransaction(userId, wallet.getId(), request, oldBalance, newBalance);
         
-        transactionService.saveTransaction(transaction);
-
-        log.info("Withdrawal successful for user: {}, amount: {}", userId, request.getAmount());
-        return new MessageResponse("Withdrawal successful. New balance: " + newBalance);
+        return new MessageResponse(
+            String.format(SuccessMessages.WITHDRAWAL_SUCCESSFUL, newBalance), 
+            true
+        );
     }
 
+    @Override
     @Transactional
     public MessageResponse transfer(TransferRequest request) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long fromUserId = userClient.getUserIdByUsername(username);
-
-        // Check if target user exists
-        if (!userClient.userExists(request.getTargetUserId())) {
-            throw new RuntimeException("Target user not found: " + request.getTargetUserId());
-        }
-
-        // Self-transfer check
-        if (fromUserId.equals(request.getTargetUserId())) {
-            throw new RuntimeException("Cannot transfer to yourself");
-        }
-
-        // Sender wallet
-        Wallet fromWallet = walletRepository.findByUserIdAndIsActiveTrue(fromUserId)
-                .orElseThrow(() -> new RuntimeException("Source wallet not found"));
-
-        // Receiver wallet (create if not exists)
-        Wallet toWallet = walletRepository.findByUserIdAndIsActiveTrue(request.getTargetUserId())
-                .orElseGet(() -> createWalletForUser(request.getTargetUserId()));
-
-        // Balance check
-        if (fromWallet.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new RuntimeException("Insufficient balance. Current balance: " + fromWallet.getBalance());
-        }
-
-        String referenceId = UUID.randomUUID().toString();
-
-        // Reduce sender balance
-        BigDecimal fromOldBalance = fromWallet.getBalance();
-        BigDecimal fromNewBalance = fromOldBalance.subtract(request.getAmount());
-        fromWallet.setBalance(fromNewBalance);
-        walletRepository.save(fromWallet);
-
-        // Increase receiver balance
-        BigDecimal toOldBalance = toWallet.getBalance();
-        BigDecimal toNewBalance = toOldBalance.add(request.getAmount());
-        toWallet.setBalance(toNewBalance);
-        walletRepository.save(toWallet);
-
-        // Transaction for sender
-        WalletTransaction outTransaction = new WalletTransaction();
-        outTransaction.setUserId(fromUserId);
-        outTransaction.setWalletId(fromWallet.getId());
-        outTransaction.setType(TransactionType.TRANSFER_OUT);
-        outTransaction.setAmount(request.getAmount());
-        outTransaction.setBalanceBefore(fromOldBalance);
-        outTransaction.setBalanceAfter(fromNewBalance);
-        outTransaction.setDescription(request.getDescription() != null ? 
-                request.getDescription() : "Transfer to user " + request.getTargetUserId());
-        outTransaction.setReferenceId(referenceId);
+        validator.validateTransferRequest(request);
         
-        // Transaction for receiver
-        WalletTransaction inTransaction = new WalletTransaction();
-        inTransaction.setUserId(request.getTargetUserId());
-        inTransaction.setWalletId(toWallet.getId());
-        inTransaction.setType(TransactionType.TRANSFER_IN);
-        inTransaction.setAmount(request.getAmount());
-        inTransaction.setBalanceBefore(toOldBalance);
-        inTransaction.setBalanceAfter(toNewBalance);
-        inTransaction.setDescription(request.getDescription() != null ? 
-                request.getDescription() : "Transfer from user " + fromUserId);
-        inTransaction.setReferenceId(referenceId);
-
-        transactionService.saveTransaction(outTransaction);
-        transactionService.saveTransaction(inTransaction);
-
-        log.info("Transfer successful from user: {} to user: {}, amount: {}", fromUserId, request.getTargetUserId(), request.getAmount());
-        return new MessageResponse("Transfer successful. New balance: " + fromNewBalance);
+        Long fromUserId = getCurrentUserId();
+        validator.validateSelfTransfer(fromUserId, request.getTargetUserId());
+        checkUserExists(request.getTargetUserId());
+        
+        Wallet fromWallet = findActiveWalletByUserId(fromUserId);
+        Wallet toWallet = getOrCreateWallet(request.getTargetUserId());
+        
+        validateSufficientBalance(fromWallet.getBalance(), request.getAmount());
+        
+        String referenceId = UUID.randomUUID().toString();
+        processTransfer(fromWallet, toWallet, request, referenceId);
+        
+        return new MessageResponse(
+            String.format(SuccessMessages.TRANSFER_SUCCESSFUL, fromWallet.getBalance()), 
+            true
+        );
     }
 
+    @Override
     @Transactional
     public void updateBalance(Long userId, BigDecimal amount) {
-        Wallet wallet = walletRepository.findByUserIdAndIsActiveTrue(userId)
-                .orElseGet(() -> createWalletForUser(userId));
-
-        BigDecimal oldBalance = wallet.getBalance();
-        BigDecimal newBalance = oldBalance.add(amount);
+        validator.validateUserId(userId);
         
-        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("Insufficient balance for operation");
+        Wallet wallet = getOrCreateWallet(userId);
+        BigDecimal newBalance = wallet.getBalance().add(amount);
+        
+        if (newBalance.compareTo(WalletConstants.MIN_BALANCE) < 0) {
+            throw new InsufficientBalanceException(ErrorMessages.BALANCE_CANNOT_BE_NEGATIVE);
         }
+        
+        updateWalletBalance(wallet, newBalance);
+    }
 
-        wallet.setBalance(newBalance);
-        walletRepository.save(wallet);
+    private void checkWalletNotExists(Long userId) {
+        if (walletRepository.existsByUserId(userId)) {
+            throw new WalletNotFoundException(
+                String.format(ErrorMessages.WALLET_ALREADY_EXISTS, userId)
+            );
+        }
+    }
 
-        log.info("Balance updated for user: {}, amount: {}, new balance: {}", userId, amount, newBalance);
+    private void checkUserExists(Long userId) {
+        if (!userClient.userExists(userId)) {
+            throw new UserNotFoundException(
+                String.format(ErrorMessages.USER_NOT_FOUND, userId)
+            );
+        }
+    }
+
+    private Wallet buildNewWallet(Long userId) {
+        Wallet wallet = new Wallet();
+        wallet.setUserId(userId);
+        wallet.setBalance(WalletConstants.ZERO_BALANCE);
+        wallet.setCurrencyCode(WalletConstants.DEFAULT_CURRENCY_CODE);
+        wallet.setIsActive(true);
+        return wallet;
+    }
+
+    private Wallet findActiveWalletByUserId(Long userId) {
+        return walletRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new WalletNotFoundException(
+                    String.format(ErrorMessages.WALLET_NOT_FOUND_FOR_USER, userId)
+                ));
+    }
+
+    private Long getCurrentUserId() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userClient.getUserIdByUsername(username);
+    }
+
+    private Wallet getOrCreateWallet(Long userId) {
+        return walletRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseGet(() -> createWalletForUser(userId));
     }
 
     private Wallet createWalletForUser(Long userId) {
-        Wallet wallet = new Wallet();
-        wallet.setUserId(userId);
-        wallet.setBalance(BigDecimal.ZERO);
-        wallet.setCurrencyCode("USD");
-        wallet.setIsActive(true);
+        Wallet wallet = buildNewWallet(userId);
+        return walletRepository.save(wallet);
+    }
+
+    private void updateWalletBalance(Wallet wallet, BigDecimal newBalance) {
+        wallet.setBalance(newBalance);
+        walletRepository.save(wallet);
+    }
+
+    private void validateSufficientBalance(BigDecimal currentBalance, BigDecimal amount) {
+        if (currentBalance.compareTo(amount) < 0) {
+            throw new InsufficientBalanceException(
+                String.format(ErrorMessages.INSUFFICIENT_BALANCE, currentBalance, amount)
+            );
+        }
+    }
+
+    private void createDepositTransaction(Long userId, Long walletId, WalletTransactionRequest request, 
+                                        BigDecimal oldBalance, BigDecimal newBalance) {
+        WalletTransaction transaction = buildTransaction(
+            userId, walletId, TransactionType.DEPOSIT, request.getAmount(),
+            oldBalance, newBalance, 
+            getDescriptionOrDefault(request.getDescription(), WalletConstants.DEFAULT_DEPOSIT_DESCRIPTION),
+            getReferenceIdOrGenerate(request.getReferenceId())
+        );
+        transactionService.saveTransaction(transaction);
+    }
+
+    private void createWithdrawalTransaction(Long userId, Long walletId, WalletTransactionRequest request, 
+                                           BigDecimal oldBalance, BigDecimal newBalance) {
+        WalletTransaction transaction = buildTransaction(
+            userId, walletId, TransactionType.WITHDRAWAL, request.getAmount(),
+            oldBalance, newBalance,
+            getDescriptionOrDefault(request.getDescription(), WalletConstants.DEFAULT_WITHDRAWAL_DESCRIPTION),
+            getReferenceIdOrGenerate(request.getReferenceId())
+        );
+        transactionService.saveTransaction(transaction);
+    }
+
+    private void processTransfer(Wallet fromWallet, Wallet toWallet, TransferRequest request, String referenceId) {
+        BigDecimal fromOldBalance = fromWallet.getBalance();
+        BigDecimal fromNewBalance = fromOldBalance.subtract(request.getAmount());
         
-        Wallet savedWallet = walletRepository.save(wallet);
-        log.info("Auto-created wallet for user: {}", userId);
+        BigDecimal toOldBalance = toWallet.getBalance();
+        BigDecimal toNewBalance = toOldBalance.add(request.getAmount());
         
-        return savedWallet;
+        updateWalletBalance(fromWallet, fromNewBalance);
+        updateWalletBalance(toWallet, toNewBalance);
+        
+        createTransferTransactions(fromWallet, toWallet, request, 
+                                 fromOldBalance, fromNewBalance, toOldBalance, toNewBalance, referenceId);
+    }
+
+    private void createTransferTransactions(Wallet fromWallet, Wallet toWallet, TransferRequest request,
+                                          BigDecimal fromOldBalance, BigDecimal fromNewBalance,
+                                          BigDecimal toOldBalance, BigDecimal toNewBalance, String referenceId) {
+        
+        WalletTransaction outTransaction = buildTransaction(
+            fromWallet.getUserId(), fromWallet.getId(), TransactionType.TRANSFER_OUT, request.getAmount(),
+            fromOldBalance, fromNewBalance,
+            getDescriptionOrDefault(request.getDescription(), 
+                String.format(WalletConstants.DEFAULT_TRANSFER_OUT_DESCRIPTION, toWallet.getUserId())),
+            referenceId
+        );
+        
+        WalletTransaction inTransaction = buildTransaction(
+            toWallet.getUserId(), toWallet.getId(), TransactionType.TRANSFER_IN, request.getAmount(),
+            toOldBalance, toNewBalance,
+            getDescriptionOrDefault(request.getDescription(), 
+                String.format(WalletConstants.DEFAULT_TRANSFER_IN_DESCRIPTION, fromWallet.getUserId())),
+            referenceId
+        );
+        
+        transactionService.saveTransaction(outTransaction);
+        transactionService.saveTransaction(inTransaction);
+    }
+
+    private WalletTransaction buildTransaction(Long userId, Long walletId, TransactionType type, BigDecimal amount,
+                                             BigDecimal balanceBefore, BigDecimal balanceAfter, 
+                                             String description, String referenceId) {
+        WalletTransaction transaction = new WalletTransaction();
+        transaction.setUserId(userId);
+        transaction.setWalletId(walletId);
+        transaction.setType(type);
+        transaction.setAmount(amount);
+        transaction.setBalanceBefore(balanceBefore);
+        transaction.setBalanceAfter(balanceAfter);
+        transaction.setDescription(description);
+        transaction.setReferenceId(referenceId);
+        return transaction;
+    }
+
+    private String getDescriptionOrDefault(String description, String defaultDescription) {
+        return description != null ? description : defaultDescription;
+    }
+
+    private String getReferenceIdOrGenerate(String referenceId) {
+        return referenceId != null ? referenceId : UUID.randomUUID().toString();
     }
 
     private WalletResponse convertToWalletResponse(Wallet wallet) {
