@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ScheduledTaskService {
 
-    private final ICryptoService cryptoService;
+    private final CryptoService cryptoService;
 
     @Scheduled(fixedRate = MarketConstants.PRICE_UPDATE_INTERVAL)
     public void updateCryptocurrencyPrices() {

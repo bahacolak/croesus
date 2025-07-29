@@ -29,7 +29,7 @@ import java.util.UUID;
 public class WalletServiceImpl implements WalletService {
 
     private final WalletRepository walletRepository;
-    private final IWalletTransactionService transactionService;
+    private final WalletTransactionService transactionService;
     private final UserClient userClient;
     private final WalletValidator validator;
 
