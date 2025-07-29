@@ -4,7 +4,7 @@ import com.bahadircolak.portfolio.dto.request.UpdatePortfolioRequest;
 import com.bahadircolak.portfolio.dto.response.PortfolioSummaryResponse;
 import com.bahadircolak.portfolio.exception.PortfolioNotFoundException;
 import com.bahadircolak.portfolio.model.Portfolio;
-import com.bahadircolak.portfolio.service.IPortfolioService;
+import com.bahadircolak.portfolio.service.PortfolioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +19,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PortfolioController {
 
-    private final IPortfolioService portfolioService;
+    private final PortfolioService portfolioService;
 
     @GetMapping
     public ResponseEntity<List<Portfolio>> getUserPortfolio() {
