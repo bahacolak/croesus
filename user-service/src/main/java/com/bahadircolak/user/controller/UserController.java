@@ -6,7 +6,7 @@ import com.bahadircolak.user.constants.UserConstants;
 import com.bahadircolak.user.dto.response.MessageResponse;
 import com.bahadircolak.user.exception.UserNotFoundException;
 import com.bahadircolak.user.model.User;
-import com.bahadircolak.user.service.IUserService;
+import com.bahadircolak.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,7 +21,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final IUserService userService;
+    private final UserService userService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")

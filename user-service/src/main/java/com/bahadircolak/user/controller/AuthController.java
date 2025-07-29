@@ -5,7 +5,7 @@ import com.bahadircolak.user.dto.request.LoginRequest;
 import com.bahadircolak.user.dto.request.SignupRequest;
 import com.bahadircolak.user.dto.response.JwtResponse;
 import com.bahadircolak.user.dto.response.MessageResponse;
-import com.bahadircolak.user.service.IAuthService;
+import com.bahadircolak.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
     
-    private final IAuthService authService;
+    private final AuthService authService;
 
     @PostMapping("/signin")
     public ResponseEntity<JwtResponse> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
