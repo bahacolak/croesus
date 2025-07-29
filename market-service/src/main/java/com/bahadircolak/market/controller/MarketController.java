@@ -2,7 +2,7 @@ package com.bahadircolak.market.controller;
 
 import com.bahadircolak.market.dto.response.AssetResponse;
 import com.bahadircolak.market.dto.response.MessageResponse;
-import com.bahadircolak.market.service.IMarketService;
+import com.bahadircolak.market.service.MarketService;
 import com.bahadircolak.market.validation.MarketValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MarketController {
 
-    private final IMarketService marketService;
+    private final MarketService marketService;
     private final MarketValidator validator;
 
     @GetMapping

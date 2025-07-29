@@ -3,7 +3,7 @@ package com.bahadircolak.market.controller;
 import com.bahadircolak.market.constants.ErrorMessages;
 import com.bahadircolak.market.dto.response.AssetResponse;
 import com.bahadircolak.market.exception.AssetNotFoundException;
-import com.bahadircolak.market.service.IMarketService;
+import com.bahadircolak.market.service.MarketService;
 import com.bahadircolak.market.validation.MarketValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +17,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AssetController {
 
-    private final IMarketService marketService;
+    private final MarketService marketService;
     private final MarketValidator validator;
 
     @GetMapping("/{symbol}")

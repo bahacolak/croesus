@@ -4,7 +4,7 @@ import com.bahadircolak.market.constants.ErrorMessages;
 import com.bahadircolak.market.dto.response.MessageResponse;
 import com.bahadircolak.market.exception.AssetNotFoundException;
 import com.bahadircolak.market.model.CryptoCurrency;
-import com.bahadircolak.market.service.ICryptoService;
+import com.bahadircolak.market.service.CryptoService;
 import com.bahadircolak.market.validation.MarketValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +19,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CryptoController {
 
-    private final ICryptoService cryptoService;
+    private final CryptoService cryptoService;
     private final MarketValidator validator;
 
     @GetMapping
