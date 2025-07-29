@@ -2,7 +2,7 @@ package com.bahadircolak.trading.controller;
 
 import com.bahadircolak.trading.dto.request.TradeRequest;
 import com.bahadircolak.trading.dto.response.TradeResponse;
-import com.bahadircolak.trading.service.ITradingService;
+import com.bahadircolak.trading.service.TradingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class TradingController {
 
-    private final ITradingService tradingService;
+    private final TradingService tradingService;
 
     @PostMapping("/buy")
     public ResponseEntity<TradeResponse> buyAsset(@Valid @RequestBody TradeRequest request) {
