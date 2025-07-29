@@ -5,7 +5,7 @@ import com.bahadircolak.user.dto.request.SignupRequest;
 import com.bahadircolak.user.dto.response.JwtResponse;
 import com.bahadircolak.user.dto.response.MessageResponse;
 
-public interface IAuthService {
+public interface AuthService {
     
     JwtResponse authenticateUser(LoginRequest loginRequest);
     
