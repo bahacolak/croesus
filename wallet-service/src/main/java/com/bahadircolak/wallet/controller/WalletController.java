@@ -6,7 +6,7 @@ import com.bahadircolak.wallet.dto.request.TransferRequest;
 import com.bahadircolak.wallet.dto.request.WalletTransactionRequest;
 import com.bahadircolak.wallet.dto.response.MessageResponse;
 import com.bahadircolak.wallet.dto.response.WalletResponse;
-import com.bahadircolak.wallet.service.IWalletService;
+import com.bahadircolak.wallet.service.WalletService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +20,7 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class WalletController {
 
-    private final IWalletService walletService;
+    private final WalletService walletService;
 
     @GetMapping
     public ResponseEntity<WalletResponse> getCurrentUserWallet() {

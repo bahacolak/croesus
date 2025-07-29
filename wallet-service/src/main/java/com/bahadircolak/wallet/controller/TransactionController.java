@@ -4,7 +4,7 @@ import com.bahadircolak.wallet.constants.WalletConstants;
 import com.bahadircolak.wallet.dto.response.TransactionSummaryResponse;
 import com.bahadircolak.wallet.model.WalletTransaction;
 import com.bahadircolak.wallet.model.WalletTransaction.TransactionType;
-import com.bahadircolak.wallet.service.IWalletTransactionService;
+import com.bahadircolak.wallet.service.WalletTransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TransactionController {
 
-    private final IWalletTransactionService transactionService;
+    private final WalletTransactionService transactionService;
 
     @GetMapping
     public ResponseEntity<List<WalletTransaction>> getUserTransactions() {
