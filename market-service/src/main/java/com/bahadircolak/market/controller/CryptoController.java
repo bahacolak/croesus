@@ -29,7 +29,7 @@ public class CryptoController {
     }
 
     @GetMapping("/{symbol}")
-    public ResponseEntity<CryptoCurrency> getCryptoCurrencyBySymbol(@PathVariable String symbol) {
+    public ResponseEntity<CryptoCurrency> getCryptoCurrencyBySymbol(@PathVariable("symbol") String symbol) {
         validator.validateSymbol(symbol);
         Optional<CryptoCurrency> crypto = cryptoService.getCryptoCurrencyBySymbol(symbol);
         return crypto.map(ResponseEntity::ok)
@@ -39,7 +39,7 @@ public class CryptoController {
     }
 
     @GetMapping("/{symbol}/price")
-    public ResponseEntity<BigDecimal> getCryptoPriceBySymbol(@PathVariable String symbol) {
+    public ResponseEntity<BigDecimal> getCryptoPriceBySymbol(@PathVariable("symbol") String symbol) {
         validator.validateSymbol(symbol);
         BigDecimal price = cryptoService.getCryptoPriceBySymbol(symbol);
         return ResponseEntity.ok(price);
