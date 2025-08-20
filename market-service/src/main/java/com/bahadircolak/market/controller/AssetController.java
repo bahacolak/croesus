@@ -21,7 +21,7 @@ public class AssetController {
     private final MarketValidator validator;
 
     @GetMapping("/{symbol}")
-    public ResponseEntity<AssetResponse> getAssetBySymbol(@PathVariable String symbol) {
+    public ResponseEntity<AssetResponse> getAssetBySymbol(@PathVariable("symbol") String symbol) {
         validator.validateSymbol(symbol);
         Optional<AssetResponse> asset = marketService.getAssetBySymbol(symbol);
         return asset.map(ResponseEntity::ok)
@@ -31,14 +31,14 @@ public class AssetController {
     }
 
     @GetMapping("/{symbol}/price")
-    public ResponseEntity<BigDecimal> getAssetPrice(@PathVariable String symbol) {
+    public ResponseEntity<BigDecimal> getAssetPrice(@PathVariable("symbol") String symbol) {
         validator.validateSymbol(symbol);
         BigDecimal price = marketService.getAssetPrice(symbol);
         return ResponseEntity.ok(price);
     }
 
     @GetMapping("/id/{coinId}")
-    public ResponseEntity<AssetResponse> getAssetById(@PathVariable String coinId) {
+    public ResponseEntity<AssetResponse> getAssetById(@PathVariable("coinId") String coinId) {
         validator.validateCoinId(coinId);
         Optional<AssetResponse> asset = marketService.getAssetById(coinId);
         return asset.map(ResponseEntity::ok)
