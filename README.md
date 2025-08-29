@@ -56,13 +56,6 @@ JWT_SECRET=your_jwt_secret_key_here
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 ```
 
-### Important Security Notes
-
-⚠️ **Never commit sensitive data to Git**
-- `.env` files are ignored by Git
-- Use different secrets for development/production
-- Rotate secrets regularly in production
-
 ## 🐳 Docker Commands
 
 ```bash
@@ -116,16 +109,6 @@ croesus/
 - Trading interface
 - Market analysis
 - Secure authentication
-
-## 🚀 Production Deployment
-
-For production deployment:
-
-1. Use strong, unique secrets in environment variables
-2. Configure HTTPS/SSL
-3. Set up proper database backups
-4. Use production-grade container orchestration (Kubernetes)
-5. Monitor logs and metrics
 
 ## 📄 License
 
