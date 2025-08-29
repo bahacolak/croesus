@@ -10,7 +10,7 @@ const ProtectedRoute = ({ children }) => {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <p>Yükleniyor...</p>
+        <p>Loading...</p>
       </div>
     );
   }

@@ -1,14 +1,14 @@
 import axios from 'axios';
 
-// API Temel yapılandırması
+// API base configuration
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || '', // Boş string varsayılan olarak aynı kaynağı kullanır (proxy sayesinde)
+  baseURL: process.env.REACT_APP_API_URL || '', // Empty string default uses the same origin (thanks to proxy)
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// İstek interceptor - her istekte token ekleme gibi yaygın işlemler için
+// Request interceptor - for common operations like adding token to every request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -22,11 +22,11 @@ api.interceptors.request.use(
   }
 );
 
-// Yanıt interceptor - 401 hataları vb. için
+// Response interceptor - for handling 401 errors etc.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Token süresi dolmuşsa oturum kapama gibi işlemler
+    // Operations like logout when token expires
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';

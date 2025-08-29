@@ -7,10 +7,10 @@ const NotFoundPage = () => {
     <div className="not-found-page">
       <div className="not-found-content">
         <h1>404</h1>
-        <h2>Sayfa Bulunamadı</h2>
-        <p>Aradığınız sayfa bulunamadı veya taşınmış olabilir.</p>
+        <h2>Page Not Found</h2>
+        <p>The page you are looking for could not be found or may have been moved.</p>
         <Link to="/" className="btn-home">
-          Ana Sayfaya Dön
+          Return to Home Page
         </Link>
       </div>
     </div>

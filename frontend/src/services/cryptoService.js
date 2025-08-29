@@ -1,8 +1,8 @@
 import api from './api';
 
 /**
- * Tüm kripto paraları getiren servis fonksiyonu
- * @returns {Promise} - Kripto para listesi içeren promise
+ * Service function to get all cryptocurrencies
+ * @returns {Promise} - Promise containing the list of cryptocurrencies
  */
 export const getAllCryptoCurrencies = async () => {
   try {
@@ -15,8 +15,8 @@ export const getAllCryptoCurrencies = async () => {
 };
 
 /**
- * Kripto para verilerini güncellemek için API isteği
- * @returns {Promise} - Güncellenen kripto para listesi içeren promise
+ * API request to update cryptocurrency data
+ * @returns {Promise} - Promise containing the updated list of cryptocurrencies
  */
 export const refreshCryptoCurrencies = async () => {
   try {
@@ -29,9 +29,9 @@ export const refreshCryptoCurrencies = async () => {
 };
 
 /**
- * Belirli bir kripto parayı ID'ye göre getiren servis
- * @param {string} id - Kripto para ID'si
- * @returns {Promise} - Kripto para bilgisi içeren promise
+ * Service to get a specific cryptocurrency by ID
+ * @param {string} id - Cryptocurrency ID
+ * @returns {Promise} - Promise containing the cryptocurrency information
  */
 export const getCryptoCurrencyById = async (id) => {
   try {

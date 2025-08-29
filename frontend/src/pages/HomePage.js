@@ -6,7 +6,6 @@ import './HomePage.css';
 const HomePage = () => {
   return (
     <div className="home-page">
-      {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
           <h1>Track, Manage, and Grow Your Digital Assets</h1>
@@ -21,10 +20,8 @@ const HomePage = () => {
         </div>
       </section>
       
-      {/* Crypto Price Overview */}
       <CryptoOverview />
       
-      {/* Features Section */}
       <section className="features-section">
         <h2 className="section-title">Why Choose Croesus</h2>
         <p className="section-subtitle">
@@ -74,7 +71,6 @@ const HomePage = () => {
         </div>
       </section>
       
-      {/* CTA Section */}
       <section className="cta-section">
         <h2>Ready to Start Your Crypto Journey?</h2>
         <p>
